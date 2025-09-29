@@ -38,6 +38,7 @@ export default function LoginPage() {
           password
         });
         if (error) throw error;
+        console.log("🔥Going to the Main Page");
         router.push("/");
       }
     } catch (error: any) {
@@ -52,7 +53,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-3xl">
-            Welcome to <span className="text-primary">Sentient</span>
+            Welcome to <span className="text-primary">Sentient 🌸</span>
           </CardTitle>
           <p className="text-muted-foreground">
             Your AI companion for emotional wellness
@@ -98,6 +99,33 @@ export default function LoginPage() {
                 required
                 placeholder="Your password"
               />
+            </div>
+            <div className="flex justify-end">
+              {!isSignUp && (
+                <button
+                  type="button"
+                  className="text-sm text-primary hover:underline"
+                  onClick={async () => {
+                    const email = (
+                      document.getElementById("email") as HTMLInputElement
+                    ).value;
+                    if (!email) {
+                      setError("Enter your email to reset your password.");
+                      return;
+                    }
+                    const { error } = await supabase.auth.resetPasswordForEmail(
+                      email,
+                      {
+                        redirectTo: `${window.location.origin}/auth/update-password`
+                      }
+                    );
+                    if (error) setError(error.message);
+                    else setError("Check your email for password reset link!");
+                  }}
+                >
+                  Forgot password?
+                </button>
+              )}
             </div>
 
             {error && <p className="text-sm text-destructive">{error}</p>}

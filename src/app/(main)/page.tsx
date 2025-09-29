@@ -6,28 +6,63 @@ import { User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
+type Profile = {
+  id: string;
+  user_id: string;
+  name: string | null;
+};
+
 export default function MainPage() {
   const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const fallbackNames = [
+    "Beautiful Soul",
+    "Sentient Being",
+    "Rockstar",
+    "Cowboy",
+    "Explorer"
+  ];
+
   useEffect(() => {
-    // Get initial user
-    const getUser = async () => {
+    const getUserAndProfile = async () => {
       const {
         data: { user }
       } = await supabase.auth.getUser();
       setUser(user);
+
+      if (user) {
+        let { data: profile } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("user_id", user.id)
+          .single();
+
+        if (!profile) {
+          // fallback: create profile row
+          const { data: newProfile } = await supabase
+            .from("profiles")
+            .insert({
+              user_id: user.id
+            })
+            .select()
+            .single();
+
+          profile = newProfile;
+        }
+
+        setProfile(profile);
+      }
       setLoading(false);
     };
 
-    getUser();
+    getUserAndProfile();
 
-    // Listen for auth changes
     const {
       data: { subscription }
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
-      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
@@ -35,81 +70,56 @@ export default function MainPage() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    // Middleware will handle redirect to login
   };
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <p>Loading...</p>
       </div>
     );
   }
 
+  const displayName =
+    profile?.name ||
+    fallbackNames[Math.floor(Math.random() * fallbackNames.length)];
+
   return (
-    <div className="min-h-screen p-8">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen flex items-center justify-center p-8">
+      <div className="max-w-3xl w-full space-y-8">
         <Card>
           <CardHeader>
-            <CardTitle className="text-3xl">
-              Welcome to <span className="text-primary">Sentient</span>
+            <CardTitle className="text-2xl">
+              Welcome back, {displayName}
             </CardTitle>
-            <p className="text-muted-foreground">
-              Your emotionally intelligent meditation companion
-            </p>
           </CardHeader>
-          <CardContent className="space-y-6">
-            {user && (
-              <div className="space-y-4">
-                <p className="text-lg">
-                  Hello, <span className="font-medium">{user.email}</span>!
-                </p>
-                <p className="text-muted-foreground">
-                  Ready to begin your emotional wellness journey?
-                </p>
+          <CardContent>
+            <p className="mb-4">
+              Choose your emotional journey to begin your meditation.
+            </p>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Button size="lg" className="h-16">
-                    Start Meditation
-                  </Button>
-                  <Button variant="outline" size="lg" className="h-16">
-                    View Profile
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="lg"
-                    className="h-16"
-                    onClick={handleSignOut}
-                  >
-                    Sign Out
-                  </Button>
-                </div>
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <Button variant="outline" className="h-20">
+                Awareness
+              </Button>
+              <Button variant="outline" className="h-20">
+                Acceptance
+              </Button>
+              <Button variant="outline" className="h-20">
+                Release
+              </Button>
+              <Button variant="outline" className="h-20">
+                Renewal
+              </Button>
+            </div>
 
-                <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg">Recent Sessions</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-muted-foreground">No sessions yet</p>
-                    </CardContent>
-                  </Card>
+            <Button className="w-full h-16">Begin Your Journey</Button>
 
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg">
-                        Emotional Journey
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-muted-foreground">
-                        Track your progress
-                      </p>
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
-            )}
+            <div className="mt-8">
+              <Button variant="ghost" onClick={handleSignOut}>
+                Sign Out
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
