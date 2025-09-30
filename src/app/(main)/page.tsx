@@ -15,7 +15,7 @@ const PHASES = [
   { id: "maintenance", label: "Maintenance", subtitle: "Sustain" }
 ];
 
-const FALLBACK_NAMES = ["Explorer", "Seeker", "Traveler", "Wanderer", "Friend"];
+const FALLBACK_NAMES = ["Explorer", "Seeker", "Traveler", "Beautiful soul"];
 
 export default function MainPage() {
   const [user, setUser] = useState<User | null>(null);

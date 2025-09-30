@@ -89,13 +89,14 @@ export default function CheckInPage() {
           Hello, beautiful soul 🌸
         </h1>
 
-        <p className="text-gray-300 text-center max-w-lg mb-8">
-          I am Tomo, your meditation companion. Let s start by understanding how
-          you are feeling right now.
-        </p>
+        {/* <p className="text-gray-300 text-center max-w-lg mb-8">
+          I am your meditation companion. Let s start by understanding how you
+          are feeling right now.
+        </p> */}
 
         {/* Question */}
-        <h2 className="text-2xl font-semibold mb-2">
+        {/* 🐲Check this style */}
+        <h2 className="text-xl font-semibold mb-2">
           How are you feeling today?
         </h2>
         <p className="text-gray-400 text-sm mb-8">

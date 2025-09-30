@@ -99,7 +99,7 @@ export default function MeditationReadyPage() {
           </h1>
 
           <p className="text-gray-300 text-center max-w-2xl mx-auto mb-12">
-            Tomo has prepared a special journey for your{" "}
+            I have prepared a special journey for your{" "}
             <span className="font-medium">{mood}</span> feelings
           </p>
 
@@ -179,13 +179,16 @@ export default function MeditationReadyPage() {
           </div>
 
           {/* Message from Tomo */}
+          {/* 🐲 Where should this message be in the layout? */}
           <div className="bg-gray-900/30 backdrop-blur-sm rounded-2xl border border-gray-700/50 p-6">
             <div className="flex gap-4">
               <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
                 <span className="text-lg">❤️</span>
               </div>
               <div>
-                <p className="font-semibold mb-2">Message from Tomo</p>
+                <p className="font-semibold mb-2">
+                  Message from Sentient AI 🤖
+                </p>
                 <p className="text-sm text-gray-300 leading-relaxed">
                   I have sensed your emotional state and crafted this meditation
                   specifically for you. Each phase will honor where you are

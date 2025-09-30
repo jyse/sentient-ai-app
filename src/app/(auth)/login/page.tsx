@@ -49,11 +49,11 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-purple-400">
+      <Card className="w-full max-w-md bg-teal-400">
         <CardHeader className="text-center">
           <CardTitle className="text-3xl">
-            Welcome to <span className="text-primary">Sentient 🌸</span>
+            Welcome to <span className="text-primary">Sentient AI🤖</span>
           </CardTitle>
           <p className="text-muted-foreground">
             Your AI companion for emotional wellness
