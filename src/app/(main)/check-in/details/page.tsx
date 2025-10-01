@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,7 @@ export default function TargetEmotionPage() {
     const {
       data: { user }
     } = await supabase.auth.getUser();
+
     if (!user) {
       setLoading(false);
       return router.push("/login");
@@ -67,7 +68,7 @@ export default function TargetEmotionPage() {
       return;
     }
 
-    // Update the same entry with target emotion
+    // Update that row with target emotion
     const { error: updateError } = await supabase
       .from("mood_entries")
       .update({ target_emotion: selectedTarget })
