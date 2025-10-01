@@ -69,26 +69,36 @@ export default function CheckInPage() {
       return router.push("/login");
     }
 
-    // Insert mood entry
-    console.log("USER: ", user);
-    const { error } = await supabase.from("mood_entries").insert([
-      {
-        user_id: user.id, // make sure RLS is set up correctly
-        current_emotion: selectedMood,
-        note: note || null
-      }
-    ]);
+    // Insert mood entry and get the ID back
+    const { data, error } = await supabase
+      .from("mood_entries")
+      .insert([
+        {
+          user_id: user.id,
+          current_emotion: selectedMood,
+          note: note || null
+        }
+      ])
+      .select()
+      .single();
 
     setLoading(false);
 
-    if (error) {
-      console.error(error);
-      setFeedback("Something went wrong. Try again 💔");
-    } else {
-      setFeedback("Thanks, I’ll keep this in mind 💙");
-      // Small delay then navigate to target emotion page
+    if (!error && data) {
       setTimeout(() => {
-        router.push(`/check-in/details?mood=${selectedMood}`);
+        router.push(`/meditation/intention?entry_id=${data.id}`);
+      }, 800);
+    }
+    if (error) {
+      console.log("👹👹👹FULL ERROR:", error);
+      setFeedback("Something went wrong. Please try again.");
+      return;
+    }
+
+    if (data) {
+      setFeedback("Got it, moving forward...");
+      setTimeout(() => {
+        router.push(`/meditation/intention?entry_id=${data.id}`);
       }, 800);
     }
   };
