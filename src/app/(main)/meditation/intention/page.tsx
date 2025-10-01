@@ -86,7 +86,7 @@ export default function MeditationIntentionPage() {
   if (!entryId || !currentMood) {
     return (
       <div className="min-h-screen bg-purple-950 text-white flex flex-col items-center justify-center gap-4">
-        <p>We couldn't find your check-in.</p>
+        <p>We could not find your check-in.</p>
         <Button onClick={() => router.push("/check-in")}>Start Over</Button>
       </div>
     );

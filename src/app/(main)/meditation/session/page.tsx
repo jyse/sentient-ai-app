@@ -242,148 +242,158 @@ export default function MeditationSessionPage() {
     100;
 
   return (
-    <div
-      className="min-h-screen flex flex-col items-center justify-center text-white relative overflow-hidden transition-colors duration-2000"
-      style={{ backgroundColor }}
-    >
-      {/* Floating orbs */}
-      <div
-        className="absolute top-1/4 left-1/4 w-64 h-64 rounded-full blur-3xl opacity-30 transition-all duration-2000"
-        style={{ backgroundColor: toHSL(currentColor) }}
-      />
-      <div
-        className="absolute bottom-1/3 right-1/4 w-80 h-80 rounded-full blur-3xl opacity-20 transition-all duration-2000"
-        style={{ backgroundColor: toHSL(targetColor) }}
-      />
+    <>
+      <style jsx global>{`
+        @keyframes breathe {
+          0%,
+          100% {
+            transform: scale(1);
+            opacity: 0.2;
+          }
+          50% {
+            transform: scale(1.4);
+            opacity: 0.5;
+          }
+        }
+      `}</style>
 
-      {/* Total progress bar */}
-      <div className="absolute top-0 left-0 w-full h-1 bg-white/10">
+      <div
+        className="min-h-screen flex flex-col items-center justify-center text-white relative overflow-hidden transition-colors duration-2000"
+        style={{ backgroundColor }}
+      >
+        {/* Floating orbs */}
         <div
-          className="h-full bg-white/60 transition-all duration-300"
-          style={{ width: `${totalProgress}%` }}
+          className="absolute top-1/4 left-1/4 w-64 h-64 rounded-full blur-3xl opacity-30 transition-all duration-2000"
+          style={{ backgroundColor: toHSL(currentColor) }}
         />
-      </div>
+        <div
+          className="absolute bottom-1/3 right-1/4 w-80 h-80 rounded-full blur-3xl opacity-20 transition-all duration-2000"
+          style={{ backgroundColor: toHSL(targetColor) }}
+        />
 
-      {/* Phase indicator */}
-      <div className="absolute top-8 text-sm opacity-60">
-        Phase {currentPhase + 1} of {STATIC_PHASES.length}
-      </div>
-
-      {/* Main content */}
-      <div className="max-w-2xl px-8 text-center space-y-8">
-        <h2
-          className={`text-3xl font-semibold transition-opacity duration-1000 ${
-            textVisible ? "opacity-100" : "opacity-0"
-          }`}
-        >
-          {phase.name}
-        </h2>
-
-        <p
-          className={`text-xl leading-relaxed max-w-lg mx-auto transition-opacity duration-1500 delay-500 ${
-            textVisible ? "opacity-90" : "opacity-0"
-          }`}
-        >
-          {phase.guidance}
-        </p>
-
-        {/* Phase progress indicator */}
-        <div className="pt-8">
-          <div className="w-64 h-1 bg-white/20 rounded-full mx-auto overflow-hidden">
-            <div
-              className="h-full bg-white/60 transition-all duration-300"
-              style={{ width: `${phaseProgressPercent}%` }}
-            />
-          </div>
-          <p className="text-sm opacity-50 mt-2">
-            {Math.floor(timeInPhase)}s / {phase.duration}s
-          </p>
-        </div>
-      </div>
-
-      {/* Player controls */}
-      {/* <div className="fixed bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-6 bg-black/40 backdrop-blur-md px-8 py-4 rounded-full border border-white/20">
-        <button
-          onClick={togglePlayPause}
-          className="w-14 h-14 flex items-center justify-center bg-white text-black rounded-full hover:bg-white/90 transition-all"
-        >
-          {isPlaying ? (
-            <Pause size={24} />
-          ) : (
-            <Play size={24} className="ml-1" />
-          )}
-        </button>
-
-        <button
-          onClick={skipToNextPhase}
-          className="w-12 h-12 flex items-center justify-center text-white hover:bg-white/10 rounded-full transition-all"
-        >
-          <SkipForward size={20} />
-        </button>
-
-        <button
-          onClick={completeMeditation}
-          className="text-sm text-white/70 hover:text-white transition-colors"
-        >
-          End Session
-        </button>
-      </div> */}
-
-      {/* Player controls - Glassmorphic style */}
-      <div className="fixed bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-white/10 backdrop-blur-xl px-6 py-3 rounded-full border border-white/20 shadow-2xl">
-        {/* Play/Pause - Main control */}
-        <button
-          onClick={togglePlayPause}
-          className="relative w-16 h-16 flex items-center justify-center bg-white/90 backdrop-blur-sm text-black rounded-full shadow-lg hover:bg-white hover:scale-105 transition-all active:scale-95"
-          style={{
-            boxShadow:
-              "0 8px 32px rgba(255, 255, 255, 0.2), inset 0 -2px 8px rgba(0, 0, 0, 0.1)"
-          }}
-        >
-          {isPlaying ? (
-            <Pause size={28} fill="currentColor" />
-          ) : (
-            <Play size={28} fill="currentColor" className="ml-1" />
-          )}
-        </button>
-
-        {/* Skip button */}
-        <button
-          onClick={skipToNextPhase}
-          className="w-12 h-12 flex items-center justify-center text-white bg-white/5 backdrop-blur-sm rounded-full border border-white/10 hover:bg-white/15 hover:border-white/20 transition-all active:scale-95"
-        >
-          <SkipForward size={20} />
-        </button>
-
-        {/* Divider */}
-        <div className="h-8 w-px bg-white/20" />
-
-        {/* End session */}
-        <button
-          onClick={completeMeditation}
-          className="px-4 py-2 text-sm text-white/80 hover:text-white bg-white/5 backdrop-blur-sm rounded-full hover:bg-white/10 transition-all"
-        >
-          End Session
-        </button>
-      </div>
-
-      {/* Phase progress with glass effect */}
-      <div className="pt-8">
-        <div className="w-64 h-2 bg-white/10 backdrop-blur-sm rounded-full mx-auto overflow-hidden border border-white/20 shadow-inner">
+        {/* Total progress bar */}
+        <div className="absolute top-0 left-0 w-full h-1 bg-white/10">
           <div
-            className="h-full bg-white/70 backdrop-blur-sm shadow-lg transition-all duration-300"
-            style={{
-              width: `${phaseProgressPercent}%`,
-              boxShadow: "0 0 12px rgba(255, 255, 255, 0.5)"
-            }}
+            className="h-full bg-white/60 transition-all duration-300"
+            style={{ width: `${totalProgress}%` }}
           />
         </div>
-        <p className="text-sm text-white/60 mt-3 font-light">
-          {Math.floor(timeInPhase)}s / {phase.duration}s
-        </p>
-      </div>
 
-      {/* 🎯 TODO: Add audio element here for voice playback */}
-    </div>
+        {/* Phase indicator */}
+        <div className="absolute top-8 text-sm opacity-60">
+          Phase {currentPhase + 1} of {STATIC_PHASES.length}
+        </div>
+
+        {/* Main content */}
+        <div className="max-w-2xl px-8 text-center space-y-8 relative">
+          {/* Breathing circle - floats behind text */}
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 pointer-events-none">
+            <div className="relative w-56 h-56">
+              {/* Outer ring */}
+              <div
+                className="absolute inset-0 rounded-full border-2 border-white/40"
+                style={{
+                  animation: "breathe 6s ease-in-out infinite"
+                }}
+              />
+              {/* Middle ring */}
+              <div
+                className="absolute inset-8 rounded-full border-2 border-white/30"
+                style={{
+                  animation: "breathe 6s ease-in-out infinite 0.7s"
+                }}
+              />
+              {/* Inner ring */}
+              <div
+                className="absolute inset-16 rounded-full border-2 border-white/20"
+                style={{
+                  animation: "breathe 6s ease-in-out infinite 1.4s"
+                }}
+              />
+              {/* Center glow */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div
+                  className="w-10 h-10 rounded-full bg-white/50 backdrop-blur-sm shadow-lg"
+                  style={{ boxShadow: "0 0 30px rgba(255, 255, 255, 0.4)" }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Text content - now renders after circle in DOM */}
+          <h2
+            className={`text-3xl font-semibold transition-opacity duration-1000 relative mt-64 ${
+              textVisible ? "opacity-100" : "opacity-0"
+            }`}
+          >
+            {phase.name}
+          </h2>
+
+          <p
+            className={`text-xl leading-relaxed max-w-lg mx-auto transition-opacity duration-1500 delay-500 relative ${
+              textVisible ? "opacity-90" : "opacity-0"
+            }`}
+          >
+            {phase.guidance}
+          </p>
+
+          {/* Phase progress indicator */}
+          <div className="pt-8 relative">
+            <div className="w-64 h-2 bg-white/10 backdrop-blur-sm rounded-full mx-auto overflow-hidden border border-white/20 shadow-inner">
+              <div
+                className="h-full bg-white/70 backdrop-blur-sm shadow-lg transition-all duration-300"
+                style={{
+                  width: `${phaseProgressPercent}%`,
+                  boxShadow: "0 0 12px rgba(255, 255, 255, 0.5)"
+                }}
+              />
+            </div>
+            <p className="text-sm text-white/60 mt-3 font-light">
+              {Math.floor(timeInPhase)}s / {phase.duration}s
+            </p>
+          </div>
+        </div>
+
+        {/* Player controls - Glassmorphic style */}
+        <div className="fixed bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-white/10 backdrop-blur-xl px-6 py-3 rounded-full border border-white/20 shadow-2xl">
+          {/* Play/Pause - Main control */}
+          <button
+            onClick={togglePlayPause}
+            className="relative w-16 h-16 flex items-center justify-center bg-white/90 backdrop-blur-sm text-black rounded-full shadow-lg hover:bg-white hover:scale-105 transition-all active:scale-95"
+            style={{
+              boxShadow:
+                "0 8px 32px rgba(255, 255, 255, 0.2), inset 0 -2px 8px rgba(0, 0, 0, 0.1)"
+            }}
+          >
+            {isPlaying ? (
+              <Pause size={28} fill="currentColor" />
+            ) : (
+              <Play size={28} fill="currentColor" className="ml-1" />
+            )}
+          </button>
+
+          {/* Skip button */}
+          <button
+            onClick={skipToNextPhase}
+            className="w-12 h-12 flex items-center justify-center text-white bg-white/5 backdrop-blur-sm rounded-full border border-white/10 hover:bg-white/15 hover:border-white/20 transition-all active:scale-95"
+          >
+            <SkipForward size={20} />
+          </button>
+
+          {/* Divider */}
+          <div className="h-8 w-px bg-white/20" />
+
+          {/* End session */}
+          <button
+            onClick={completeMeditation}
+            className="px-4 py-2 text-sm text-white/80 hover:text-white bg-white/5 backdrop-blur-sm rounded-full hover:bg-white/10 transition-all"
+          >
+            End Session
+          </button>
+        </div>
+
+        {/* 🎯 TODO: Add audio element here for voice playback */}
+      </div>
+    </>
   );
 }
