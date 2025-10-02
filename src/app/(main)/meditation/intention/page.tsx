@@ -20,7 +20,7 @@ export default function MeditationIntentionPage() {
   const [feedback, setFeedback] = useState("");
   const [fetchingMood, setFetchingMood] = useState(true);
 
-  // Fetch the current mood from the database using entry_id
+  // Fetch current mood from DB
   useEffect(() => {
     const fetchCurrentMood = async () => {
       if (!entryId) {
@@ -31,7 +31,7 @@ export default function MeditationIntentionPage() {
 
       const { data, error } = await supabase
         .from("mood_entries")
-        .select("current_emotion")
+        .select("current_emotion, target_emotion")
         .eq("id", entryId)
         .single();
 
@@ -40,6 +40,9 @@ export default function MeditationIntentionPage() {
         setFeedback("Couldn't load your check-in. Please try again.");
       } else if (data) {
         setCurrentMood(data.current_emotion);
+        if (data.target_emotion) {
+          setSelectedTarget(data.target_emotion); // pre-fill if user already chose
+        }
       }
 
       setFetchingMood(false);
@@ -48,7 +51,6 @@ export default function MeditationIntentionPage() {
     fetchCurrentMood();
   }, [entryId]);
 
-  // Get target emotion options based on current mood
   const targetEmotionIds = getTargetEmotions(currentMood);
 
   const handleSubmit = async () => {
@@ -63,7 +65,7 @@ export default function MeditationIntentionPage() {
     setLoading(false);
 
     if (error) {
-      console.log("👹👹👹Error updating target emotion:", error);
+      console.log("👹Error updating target emotion:", error);
       setFeedback("Something went wrong. Please try again.");
     } else {
       setFeedback("Got it. Preparing your meditation...");
@@ -73,7 +75,7 @@ export default function MeditationIntentionPage() {
     }
   };
 
-  // Loading state
+  // Loading
   if (fetchingMood) {
     return (
       <div className="min-h-screen bg-purple-950 text-white flex items-center justify-center">
@@ -82,7 +84,7 @@ export default function MeditationIntentionPage() {
     );
   }
 
-  // Error state
+  // Error
   if (!entryId || !currentMood) {
     return (
       <div className="min-h-screen bg-purple-950 text-white flex flex-col items-center justify-center gap-4">
@@ -111,13 +113,28 @@ export default function MeditationIntentionPage() {
         <h2 className="text-2xl font-semibold mb-2 text-center">
           Set your intention
         </h2>
-        <p className="text-gray-400 text-sm mb-8 text-center max-w-md">
-          You are feeling right now.
-          <span className="text-white font-medium">{currentMood}</span>. Choose
-          where you'd like this meditation to take you
+        <p className="text-gray-400 text-sm mb-4 text-center max-w-md">
+          We guide you step by step — for example, from sadness toward calmness,
+          not all the way to joy in one leap.
+        </p>
+        <p className="text-gray-400 text-sm mb-6 text-center max-w-md">
+          You are feeling{" "}
+          <span className="text-white font-medium">{currentMood}</span>. Where
+          would you like this meditation to guide you?
         </p>
 
-        {/* Target Options - Dynamic based on current mood */}
+        {/* Mood Transition Visual */}
+        <div className="flex items-center gap-2 mb-8 text-lg">
+          <span>{getEmotionDisplay(currentMood)?.emoji}</span>
+          <span className="text-gray-400">→</span>
+          {selectedTarget ? (
+            <span>{getEmotionDisplay(selectedTarget)?.emoji}</span>
+          ) : (
+            <span className="text-gray-600">?</span>
+          )}
+        </div>
+
+        {/* Target Options */}
         <div className="flex gap-4 mb-8 flex-wrap justify-center max-w-2xl">
           {targetEmotionIds.map((emotionId) => {
             const display = getEmotionDisplay(emotionId);
@@ -125,6 +142,7 @@ export default function MeditationIntentionPage() {
               <button
                 key={emotionId}
                 onClick={() => setSelectedTarget(emotionId)}
+                aria-pressed={selectedTarget === emotionId}
                 className={`
                   relative p-6 rounded-2xl border-2 transition-all duration-300 min-w-[140px]
                   ${

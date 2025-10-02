@@ -83,7 +83,7 @@ export default function CheckInPage() {
       result = await supabase
         .from("mood_entries")
         .update(moodData)
-        .eq("id", Number(entryId))
+        .eq("id", entryId)
         .select()
         .single();
     } else {
@@ -164,11 +164,11 @@ export default function CheckInPage() {
         {/* Note Field */}
         <div className="w-full max-w-2xl mb-6">
           <label className="block text-sm mb-2">
-            (Optional) Share more about what's on your heart
+            (Optional) Share more about what is on your heart
           </label>
           <p className="text-xs text-gray-400 mb-2">
-            Only you can see this. It's stored privately in your account to help
-            guide your meditation.
+            Only you can see this. It is stored privately in your account to
+            help guide your meditation.
           </p>
           <textarea
             value={note}
