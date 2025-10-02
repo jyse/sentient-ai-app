@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 
@@ -52,6 +52,9 @@ const MOODS = [
 
 export default function CheckInPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const entryId = searchParams.get("entry_id");
+
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
@@ -69,38 +72,43 @@ export default function CheckInPage() {
       return router.push("/login");
     }
 
-    // Insert mood entry and get the ID back
-    const { data, error } = await supabase
-      .from("mood_entries")
-      .insert([
-        {
-          user_id: user.id,
-          current_emotion: selectedMood,
-          note: note || null
-        }
-      ])
-      .select()
-      .single();
+    const moodData = {
+      current_emotion: selectedMood,
+      note: note || null
+    };
 
+    let result;
+    if (entryId) {
+      // Update existing entry
+      result = await supabase
+        .from("mood_entries")
+        .update(moodData)
+        .eq("id", Number(entryId))
+        .select()
+        .single();
+    } else {
+      // Create new entry
+      result = await supabase
+        .from("mood_entries")
+        .insert([{ ...moodData, user_id: user.id }])
+        .select()
+        .single();
+    }
+
+    const { data, error } = result;
     setLoading(false);
 
-    if (!error && data) {
-      setTimeout(() => {
-        router.push(`/meditation/intention?entry_id=${data.id}`);
-      }, 800);
-    }
-    if (error) {
-      console.log("👹👹👹FULL ERROR:", error);
-      setFeedback("Something went wrong. Please try again.");
+    if (error || !data) {
+      console.error("Mood save error:", error);
+      setFeedback("Something went wrong saving your mood. Please try again 💔");
       return;
     }
 
-    if (data) {
-      setFeedback("Got it, moving forward...");
-      setTimeout(() => {
-        router.push(`/meditation/intention?entry_id=${data.id}`);
-      }, 800);
-    }
+    setFeedback("Mood saved! Redirectin...");
+    console.log("✅ Mood saved");
+    setTimeout(() => {
+      router.push(`/meditation/intention?entry_id=${data.id}`);
+    }, 800);
   };
 
   return (
@@ -142,7 +150,6 @@ export default function CheckInPage() {
                 }
               `}
             >
-              {/* Icon */}
               <div
                 className={`w-12 h-12 ${mood.color} rounded-full flex items-center justify-center mb-3 mx-auto`}
               >
@@ -157,10 +164,10 @@ export default function CheckInPage() {
         {/* Note Field */}
         <div className="w-full max-w-2xl mb-6">
           <label className="block text-sm mb-2">
-            (Optional) Share more about what’s on your heart
+            (Optional) Share more about what's on your heart
           </label>
           <p className="text-xs text-gray-400 mb-2">
-            Only you can see this. It’s stored privately in your account to help
+            Only you can see this. It's stored privately in your account to help
             guide your meditation.
           </p>
           <textarea
@@ -186,10 +193,10 @@ export default function CheckInPage() {
 
         {/* Back */}
         <button
-          onClick={() => router.push("/")}
+          onClick={() => router.back()}
           className="mt-6 flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
         >
-          <span>←</span> Back to Welcome
+          <span>←</span> Back
         </button>
       </div>
     </div>

@@ -112,9 +112,9 @@ export default function MeditationIntentionPage() {
           Set your intention
         </h2>
         <p className="text-gray-400 text-sm mb-8 text-center max-w-md">
-          You are feeling{" "}
-          <span className="text-white font-medium">{currentMood}</span>. Where
-          would you like this meditation to guide you?
+          You are feeling right now.
+          <span className="text-white font-medium">{currentMood}</span>. Choose
+          where you'd like this meditation to take you
         </p>
 
         {/* Target Options - Dynamic based on current mood */}
@@ -151,7 +151,10 @@ export default function MeditationIntentionPage() {
 
         {/* Buttons */}
         <div className="flex gap-4">
-          <Button variant="outline" onClick={() => router.back()}>
+          <Button
+            variant="outline"
+            onClick={() => router.push(`/check-in?entry_id=${entryId}`)}
+          >
             Back
           </Button>
           <Button onClick={handleSubmit} disabled={!selectedTarget || loading}>
