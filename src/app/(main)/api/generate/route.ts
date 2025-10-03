@@ -100,6 +100,7 @@ Requirements:
 - Use the "inspiration lines" as raw material; adapt rather than copy.
 - Personalize lightly using the user's note if present.
 - Return ONLY a JSON array of 6 items with keys "phase" and "text".
+- Output ONLY a valid JSON array. Do not include markdown, code fences, or explanations. 
 `;
 
     const user = `
@@ -120,14 +121,19 @@ ${inspirations}
       ]
     });
 
-    const raw = completion.choices[0]?.message?.content ?? "[]";
+    let raw = completion.choices[0].message?.content || "[]";
 
-    let meditation: unknown;
+    // Strip Markdown code fences if present
+    raw = raw.trim();
+    if (raw.startsWith("```")) {
+      raw = raw.replace(/```json\n?/, "").replace(/```$/, "");
+    }
+
+    let meditation: MeditationPhase[] = [];
     try {
       meditation = JSON.parse(raw);
-    } catch {
-      console.error("AI returned non-JSON:", raw);
-      return NextResponse.json({ error: "Bad AI JSON" }, { status: 502 });
+    } catch (err) {
+      console.error("Failed to parse meditation JSON:", err, raw);
     }
 
     // 5) Validate shape: must be an array of 6 phases

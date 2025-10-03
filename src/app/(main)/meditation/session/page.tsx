@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Pause, Play, SkipForward } from "lucide-react";
 
-// Emotion color mapping
+// 🎨 Emotion color mapping
 const EMOTION_COLORS: Record<
   string,
   { hue: number; sat: number; light: number }
@@ -23,6 +23,7 @@ const EMOTION_COLORS: Record<
   happy: { hue: 50, sat: 80, light: 65 }
 };
 
+// 📝 Types
 type MoodEntry = {
   id: string;
   current_emotion: string;
@@ -30,12 +31,19 @@ type MoodEntry = {
   note: string | null;
 };
 
-type Phase = {
-  phase: string;
-  text: string;
-  theme?: any;
+export type MeditationTheme = {
+  duration?: number; // seconds
+  color?: string;
+  [key: string]: string | number | undefined;
 };
 
+export type MeditationPhase = {
+  phase: string;
+  text: string;
+  theme?: MeditationTheme;
+};
+
+// 🎨 Helpers
 function interpolateColor(
   from: { hue: number; sat: number; light: number },
   to: { hue: number; sat: number; light: number },
@@ -52,24 +60,13 @@ function toHSL(color: { hue: number; sat: number; light: number }) {
   return `hsl(${color.hue}, ${color.sat}%, ${color.light}%)`;
 }
 
-export type MeditationTheme = {
-  duration?: number;
-  color?: string;
-  [key: string]: string | number | undefined;
-};
-
-export type MeditationPhase = {
-  phase: string;
-  text: string;
-  theme?: MeditationTheme;
-};
-
 export default function MeditationSessionPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const entryId = searchParams.get("entry_id");
 
   const [entry, setEntry] = useState<MoodEntry | null>(null);
+  const [meditation, setMeditation] = useState<MeditationPhase[]>([]);
 
   const [currentPhase, setCurrentPhase] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -77,9 +74,8 @@ export default function MeditationSessionPage() {
   const [textVisible, setTextVisible] = useState(false);
   const [sessionComplete, setSessionComplete] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [meditation, setMeditation] = useState<MeditationPhase[]>([]);
 
-  // Fetch mood entry + meditation JSON
+  // 🗂 Fetch mood entry + meditation JSON
   useEffect(() => {
     const fetchEntry = async () => {
       if (!entryId) {
@@ -87,18 +83,14 @@ export default function MeditationSessionPage() {
         return;
       }
 
-      // Get entry from Supabase
       const { data } = await supabase
         .from("mood_entries")
         .select("id, current_emotion, target_emotion, note")
         .eq("id", entryId)
         .single();
 
-      if (data) {
-        setEntry(data);
-      }
+      if (data) setEntry(data);
 
-      // Get meditation JSON from localStorage
       const stored = localStorage.getItem("currentMeditation");
       if (stored) {
         setMeditation(JSON.parse(stored));
@@ -110,7 +102,7 @@ export default function MeditationSessionPage() {
     fetchEntry();
   }, [entryId, router]);
 
-  // Text fade in when phase changes
+  // ✨ Fade-in effect when phase changes
   useEffect(() => {
     setTextVisible(false);
     setTimeInPhase(0);
@@ -120,19 +112,17 @@ export default function MeditationSessionPage() {
     return () => clearTimeout(timer);
   }, [currentPhase]);
 
-  // Playback timer
+  // ⏱ Phase timer
   useEffect(() => {
     if (!isPlaying) return;
 
     const interval = setInterval(() => {
       setTimeInPhase((prev) => {
         const phase = meditation[currentPhase];
+        const duration = phase?.theme?.duration || 90;
         const newTime = prev + 1;
 
-        if (!phase?.theme?.duration) return newTime; // fallback
-
-        // Auto-advance to next phase
-        if (newTime >= (phase.theme.duration || 90)) {
+        if (newTime >= duration) {
           if (currentPhase < meditation.length - 1) {
             setCurrentPhase(currentPhase + 1);
             return 0;
@@ -141,7 +131,6 @@ export default function MeditationSessionPage() {
             return prev;
           }
         }
-
         return newTime;
       });
     }, 1000);
@@ -149,9 +138,7 @@ export default function MeditationSessionPage() {
     return () => clearInterval(interval);
   }, [isPlaying, currentPhase, meditation]);
 
-  const togglePlayPause = () => {
-    setIsPlaying(!isPlaying);
-  };
+  const togglePlayPause = () => setIsPlaying(!isPlaying);
 
   const skipToNextPhase = () => {
     if (currentPhase < meditation.length - 1) {
@@ -186,6 +173,7 @@ export default function MeditationSessionPage() {
     }, 2500);
   };
 
+  // 🌀 States
   if (loading) {
     return (
       <div className="min-h-screen bg-purple-950 flex items-center justify-center text-white">
@@ -206,13 +194,13 @@ export default function MeditationSessionPage() {
   if (sessionComplete) {
     return (
       <div className="min-h-screen bg-purple-950 flex flex-col items-center justify-center text-white">
-        <h2 className="text-4xl font-bold mb-4">Beautiful work</h2>
+        <h2 className="text-4xl font-bold mb-4">Beautiful work ✨</h2>
         <p className="text-gray-300">You completed your meditation.</p>
       </div>
     );
   }
 
-  // Colors → interpolate between current and target emotion
+  // 🎨 Background interpolation
   const currentColor =
     EMOTION_COLORS[entry.current_emotion] || EMOTION_COLORS.calm;
   const targetColor =
@@ -231,6 +219,7 @@ export default function MeditationSessionPage() {
   const totalProgress =
     ((currentPhase + timeInPhase / phaseDuration) / meditation.length) * 100;
 
+  // 🎭 UI
   return (
     <>
       <style jsx global>{`
@@ -251,17 +240,7 @@ export default function MeditationSessionPage() {
         className="min-h-screen flex flex-col items-center justify-center text-white relative overflow-hidden transition-colors duration-2000"
         style={{ backgroundColor }}
       >
-        {/* Floating orbs */}
-        <div
-          className="absolute top-1/4 left-1/4 w-64 h-64 rounded-full blur-3xl opacity-30 transition-all duration-2000"
-          style={{ backgroundColor: toHSL(currentColor) }}
-        />
-        <div
-          className="absolute bottom-1/3 right-1/4 w-80 h-80 rounded-full blur-3xl opacity-20 transition-all duration-2000"
-          style={{ backgroundColor: toHSL(targetColor) }}
-        />
-
-        {/* Total progress bar */}
+        {/* Progress bar */}
         <div className="absolute top-0 left-0 w-full h-1 bg-white/10">
           <div
             className="h-full bg-white/60 transition-all duration-300"
@@ -276,31 +255,6 @@ export default function MeditationSessionPage() {
 
         {/* Main content */}
         <div className="max-w-2xl px-8 text-center space-y-8 relative">
-          {/* Breathing circle */}
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 pointer-events-none">
-            <div className="relative w-56 h-56">
-              <div
-                className="absolute inset-0 rounded-full border-2 border-white/40"
-                style={{
-                  animation: "breathe 6s ease-in-out infinite"
-                }}
-              />
-              <div
-                className="absolute inset-8 rounded-full border-2 border-white/30"
-                style={{
-                  animation: "breathe 6s ease-in-out infinite 0.7s"
-                }}
-              />
-              <div
-                className="absolute inset-16 rounded-full border-2 border-white/20"
-                style={{
-                  animation: "breathe 6s ease-in-out infinite 1.4s"
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Text */}
           <h2
             className={`text-3xl font-semibold transition-opacity duration-1000 relative mt-64 ${
               textVisible ? "opacity-100" : "opacity-0"
@@ -316,7 +270,7 @@ export default function MeditationSessionPage() {
             {phase?.text}
           </p>
 
-          {/* Phase progress indicator */}
+          {/* Phase progress */}
           <div className="pt-8 relative">
             <div className="w-64 h-2 bg-white/10 rounded-full mx-auto overflow-hidden">
               <div
@@ -330,7 +284,7 @@ export default function MeditationSessionPage() {
           </div>
         </div>
 
-        {/* Player controls */}
+        {/* Controls */}
         <div className="fixed bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-white/10 backdrop-blur-xl px-6 py-3 rounded-full border border-white/20 shadow-2xl">
           <button
             onClick={togglePlayPause}
