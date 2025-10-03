@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
@@ -73,44 +73,12 @@ export default function MeditationSessionPage() {
   const [textVisible, setTextVisible] = useState(false);
   const [sessionComplete, setSessionComplete] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
 
-  // ⏱ Phase timer
+  // ✅ Keep a ref with the latest currentPhase to avoid stale closures in setInterval
+  const currentPhaseRef = useRef(0);
   useEffect(() => {
-    if (!isPlaying) return;
-
-    const interval = setInterval(() => {
-      setTimeInPhase((prevTime) => {
-        const phase = meditation[currentPhase];
-        const duration = phase?.theme?.duration || 90;
-        const newTime = prevTime + 1;
-
-        if (newTime >= duration) {
-          setCurrentPhase((prevPhase) => {
-            if (prevPhase < meditation.length - 1) {
-              return prevPhase + 1;
-            } else {
-              completeMeditation();
-              return prevPhase;
-            }
-          });
-          return 0; // reset timer
-        }
-
-        return newTime;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [isPlaying, meditation]); // 👈 no `currentPhase` here
-
-  useEffect(() => {
-    if (isPlaying && audio) {
-      audio.play();
-    } else {
-      audio?.pause();
-    }
-  }, [isPlaying, audio]);
+    currentPhaseRef.current = currentPhase;
+  }, [currentPhase]);
 
   // 🗂 Fetch mood entry + meditation JSON
   useEffect(() => {
@@ -130,7 +98,12 @@ export default function MeditationSessionPage() {
 
       const stored = localStorage.getItem("currentMeditation");
       if (stored) {
-        setMeditation(JSON.parse(stored));
+        try {
+          setMeditation(JSON.parse(stored));
+        } catch {
+          // if bad data, fall back to empty
+          setMeditation([]);
+        }
       }
 
       setLoading(false);
@@ -143,24 +116,23 @@ export default function MeditationSessionPage() {
   useEffect(() => {
     setTextVisible(false);
     setTimeInPhase(0);
-    const timer = setTimeout(() => {
-      setTextVisible(true);
-    }, 500);
+    const timer = setTimeout(() => setTextVisible(true), 500);
     return () => clearTimeout(timer);
   }, [currentPhase]);
 
-  const togglePlayPause = () => setIsPlaying(!isPlaying);
+  // ⏱ Compute accurate elapsed time (sum of completed phases + current phase progress)
+  const computeElapsedSeconds = useCallback(
+    (phaseIndex: number, secondsInPhase: number) => {
+      const sumBefore = meditation
+        .slice(0, phaseIndex)
+        .reduce((acc, p) => acc + (p.theme?.duration || 90), 0);
+      return sumBefore + secondsInPhase;
+    },
+    [meditation]
+  );
 
-  const skipToNextPhase = () => {
-    if (currentPhase < meditation.length - 1) {
-      setCurrentPhase(currentPhase + 1);
-      setTimeInPhase(0);
-    } else {
-      completeMeditation();
-    }
-  };
-
-  const completeMeditation = async () => {
+  // ✅ Complete meditation (save session + route)
+  const completeMeditation = useCallback(async () => {
     setIsPlaying(false);
     setSessionComplete(true);
 
@@ -169,12 +141,16 @@ export default function MeditationSessionPage() {
     } = await supabase.auth.getUser();
 
     if (user && entryId) {
+      const elapsed = computeElapsedSeconds(
+        currentPhaseRef.current,
+        timeInPhase
+      );
       await supabase.from("meditation_sessions").insert([
         {
           user_id: user.id,
           mood_entry_id: entryId,
           completed: true,
-          duration_seconds: currentPhase * 90 + timeInPhase
+          duration_seconds: elapsed
         }
       ]);
     }
@@ -182,6 +158,52 @@ export default function MeditationSessionPage() {
     setTimeout(() => {
       router.push("/profile");
     }, 2500);
+  }, [entryId, router, computeElapsedSeconds, timeInPhase]);
+
+  // ⏱ Phase timer – single interval, no stale `currentPhase`
+  useEffect(() => {
+    if (!isPlaying || meditation.length === 0) return;
+
+    const interval = setInterval(() => {
+      setTimeInPhase((prev) => {
+        const idx = currentPhaseRef.current;
+        const phase = meditation[idx];
+        const duration = phase?.theme?.duration || 90;
+        const newTime = prev + 1;
+
+        if (newTime >= duration) {
+          // Advance to next phase or complete
+          setCurrentPhase((prevPhase) => {
+            const next = Math.min(prevPhase + 1, meditation.length - 1);
+            currentPhaseRef.current = next;
+            return next;
+          });
+
+          if (idx >= meditation.length - 1) {
+            // finishing last phase
+            // Use a microtask to avoid state updates inside state setter chain
+            Promise.resolve().then(() => completeMeditation());
+          }
+
+          return 0; // reset timer for the new/current phase
+        }
+
+        return newTime;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isPlaying, meditation, completeMeditation]);
+
+  const togglePlayPause = () => setIsPlaying((p) => !p);
+
+  const skipToNextPhase = () => {
+    setCurrentPhase((prev) => {
+      const next = Math.min(prev + 1, meditation.length - 1);
+      currentPhaseRef.current = next;
+      return next;
+    });
+    setTimeInPhase(0);
   };
 
   // 🌀 States
@@ -216,7 +238,7 @@ export default function MeditationSessionPage() {
     EMOTION_COLORS[entry.current_emotion] || EMOTION_COLORS.calm;
   const targetColor =
     EMOTION_COLORS[entry.target_emotion] || EMOTION_COLORS.peaceful;
-  const phaseProgress = currentPhase / (meditation.length - 1);
+  const phaseProgress = currentPhase / Math.max(1, meditation.length - 1);
   const interpolated = interpolateColor(
     currentColor,
     targetColor,
