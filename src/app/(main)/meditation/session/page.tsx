@@ -34,7 +34,6 @@ type MeditationPhase = {
   text: string;
   theme?: {
     duration?: number;
-    [key: string]: any;
   };
 };
 

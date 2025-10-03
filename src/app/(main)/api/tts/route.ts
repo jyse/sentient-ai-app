@@ -14,8 +14,8 @@ export async function POST(req: Request) {
     input: text
   });
 
-  const buffer = Buffer.from(await response.arrayBuffer());
-  return new NextResponse(buffer, {
+  const arrayBuffer = await response.arrayBuffer();
+  return new NextResponse(arrayBuffer, {
     headers: {
       "Content-Type": "audio/mpeg"
     }
