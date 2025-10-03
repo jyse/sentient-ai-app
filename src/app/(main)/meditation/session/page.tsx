@@ -53,18 +53,21 @@ function toHSL(color: { hue: number; sat: number; light: number }) {
   return `hsl(${color.hue}, ${color.sat}%, ${color.light}%)`;
 }
 
-function useTypewriter(text: string, speed = 35) {
+function useTypewriter(text: string, duration = 5000) {
   const [displayed, setDisplayed] = useState<string>("");
+
   useEffect(() => {
     setDisplayed("");
+    if (!text) return;
     let i = 0;
+    const speed = Math.max(duration / text.length, 20); // safeguard
     const interval = setInterval(() => {
       setDisplayed((prev) => prev + text.charAt(i));
       i++;
       if (i >= text.length) clearInterval(interval);
     }, speed);
     return () => clearInterval(interval);
-  }, [text, speed]);
+  }, [text, duration]);
   return displayed;
 }
 
@@ -93,7 +96,7 @@ export default function MeditationSessionPage() {
   }, [currentPhase]);
 
   const phase = meditation[currentPhase];
-  const displayedText = useTypewriter(phase?.text ?? "");
+  const displayedText = useTypewriter(phase?.text ?? "", 5000);
 
   // Fade text in on phase change
   useEffect(() => {
@@ -129,6 +132,7 @@ export default function MeditationSessionPage() {
             const cache: Record<number, string> = {};
             await Promise.all(
               parsed.map(async (phase, i) => {
+                if (ttsCacheRef.current[i]) return;
                 try {
                   const res = await fetch("/api/tts", {
                     method: "POST",
@@ -143,7 +147,7 @@ export default function MeditationSessionPage() {
                 }
               })
             );
-            ttsCacheRef.current = cache;
+            ttsCacheRef.current = { ...ttsCacheRef.current, ...cache };
           } catch {
             console.error("Failed to parse meditation from localStorage");
           }
@@ -184,27 +188,28 @@ export default function MeditationSessionPage() {
 
   // TTS for each phase when playing
   useEffect(() => {
-    if (!isPlaying) return;
+    if (!entry || !meditation.length) return;
 
-    voiceAudioRef.current?.pause();
-    voiceAudioRef.current = null;
-
-    const url = ttsCacheRef.current[currentPhase];
-    if (url) {
-      const audio = new Audio(url);
-      voiceAudioRef.current = audio;
-
-      audio.addEventListener("ended", () => {
-        if (url.startsWith("blob:")) {
-          URL.revokeObjectURL(url);
-        }
-      });
-
-      audio.play().catch(() => {
-        /* user must click Play first */
+    // start background music immediately
+    if (bgAudio) {
+      bgAudio.play().catch(() => {
+        console.warn("Autoplay blocked for bgAudio");
       });
     }
-  }, [isPlaying, currentPhase]);
+
+    // play first narration automatically
+    const url = ttsCacheRef.current[0];
+    if (url && !voiceAudioRef.current) {
+      const audio = new Audio(url);
+      voiceAudioRef.current = audio;
+      audio.play().catch(() => {
+        console.warn("Autoplay blocked for narration");
+      });
+    }
+
+    // set playing state true so timer starts
+    setIsPlaying(true);
+  }, [entry, meditation, bgAudio]);
 
   const completeMeditation = useCallback(async () => {
     setIsPlaying(false);
