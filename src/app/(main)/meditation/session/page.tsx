@@ -54,11 +54,25 @@ function toHSL(color: { hue: number; sat: number; light: number }) {
   return `hsl(${color.hue}, ${color.sat}%, ${color.light}%)`;
 }
 
+function useTypewriter(text: string, speed = 35) {
+  const [displayed, setDisplayed] = useState<string>("");
+  useEffect(() => {
+    setDisplayed("");
+    let i = 0;
+    const interval = setInterval(() => {
+      setDisplayed((prev) => prev + text.charAt(i));
+      i++;
+      if (i >= text.length) clearInterval(interval);
+    }, speed);
+    return () => clearInterval(interval);
+  }, [text, speed]);
+  return displayed;
+}
+
 export default function MeditationSessionPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const entryId = searchParams.get("entry_id");
-
   const [entry, setEntry] = useState<MoodEntry | null>(null);
   const [meditation, setMeditation] = useState<MeditationPhase[]>([]);
   const [currentPhase, setCurrentPhase] = useState(0);
@@ -68,8 +82,12 @@ export default function MeditationSessionPage() {
   const [textVisible, setTextVisible] = useState(false);
   const [sessionComplete, setSessionComplete] = useState(false);
   const [loading, setLoading] = useState(true);
-
+  const [bgAudio, setBgAudio] = useState<HTMLAudioElement | null>(null);
+  const [voiceAudio, setVoiceAudio] = useState<HTMLAudioElement | null>(null);
+  const voiceAudioRef = useRef<HTMLAudioElement | null>(null);
   const currentPhaseRef = useRef(0);
+  const phase = meditation[currentPhase]; // may be undefined; that's fine
+  const displayedText = useTypewriter(phase?.text ?? "");
 
   useEffect(() => {
     currentPhaseRef.current = currentPhase;
@@ -92,8 +110,7 @@ export default function MeditationSessionPage() {
       if (data) {
         setEntry(data);
 
-        // TODO: Replace with API call to /api/generate-meditation
-        // For now, check localStorage as fallback
+        // 🐲 check things now maybe not in localstorage
         const stored = localStorage.getItem("currentMeditation");
         if (stored) {
           try {
@@ -102,6 +119,12 @@ export default function MeditationSessionPage() {
             console.error("Failed to parse meditation from localStorage");
           }
         }
+
+        // Start background music for target emotion
+        const music = new Audio(`/music/${data.target_emotion}.mp3`);
+        music.loop = true;
+        music.volume = 0.35;
+        setBgAudio(music);
       }
 
       setLoading(false);
@@ -110,45 +133,41 @@ export default function MeditationSessionPage() {
     fetchData();
   }, [entryId, router]);
 
-  // Text fade when phase changes
   useEffect(() => {
-    setTextVisible(false);
-    setTimeInPhase(0);
-    const timer = setTimeout(() => setTextVisible(true), 500);
-    return () => clearTimeout(timer);
-  }, [currentPhase]);
+    if (!isPlaying) return;
+    const p = meditation[currentPhase];
+    if (!p?.text) return;
 
-  // Playback timer
-  useEffect(() => {
-    if (!isPlaying || meditation.length === 0) return;
+    // stop previous
+    voiceAudioRef.current?.pause();
+    voiceAudioRef.current = null;
 
-    const interval = setInterval(() => {
-      setTimeInPhase((prev) => prev + 1);
-      setTotalTimeElapsed((prev) => prev + 1);
-
-      const phase = meditation[currentPhaseRef.current];
-      const duration = phase?.theme?.duration || 90;
-
-      if (prev + 1 >= duration) {
-        if (currentPhaseRef.current < meditation.length - 1) {
-          setCurrentPhase((p) => {
-            const next = p + 1;
-            currentPhaseRef.current = next;
-            return next;
-          });
-          setTimeInPhase(0);
-        } else {
-          completeMeditation();
-        }
+    (async () => {
+      try {
+        const res = await fetch("/api/tts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: p.text })
+        });
+        if (!res.ok) throw new Error("TTS failed");
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        voiceAudioRef.current = audio;
+        audio.play().catch(() => {
+          /* user must press play */
+        });
+      } catch (e) {
+        console.error(e);
       }
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [isPlaying, meditation]);
+    })();
+  }, [isPlaying, currentPhase, meditation]);
 
   const completeMeditation = useCallback(async () => {
     setIsPlaying(false);
     setSessionComplete(true);
+    bgAudio?.pause();
+    voiceAudio?.pause();
 
     const {
       data: { user }
@@ -166,9 +185,49 @@ export default function MeditationSessionPage() {
     }
 
     setTimeout(() => router.push("/profile"), 2500);
-  }, [entryId, totalTimeElapsed, router]);
+  }, [entryId, totalTimeElapsed, router, bgAudio, voiceAudio]);
 
-  const togglePlayPause = () => setIsPlaying((p) => !p);
+  // Playback timer
+  useEffect(() => {
+    if (!isPlaying || meditation.length === 0) return;
+
+    const interval = setInterval(() => {
+      setTimeInPhase((prev) => prev + 1);
+      setTotalTimeElapsed((prev) => prev + 1);
+
+      const phase = meditation[currentPhaseRef.current];
+      const duration = phase?.theme?.duration || 90;
+
+      if (timeInPhase + 1 >= duration) {
+        if (currentPhaseRef.current < meditation.length - 1) {
+          setCurrentPhase((p) => {
+            const next = p + 1;
+            currentPhaseRef.current = next;
+            return next;
+          });
+          setTimeInPhase(0);
+        } else {
+          completeMeditation();
+        }
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isPlaying, meditation, timeInPhase, completeMeditation]);
+
+  const togglePlayPause = () => {
+    setIsPlaying((p) => {
+      const next = !p;
+      if (next) {
+        bgAudio?.play().catch(() => {});
+        voiceAudioRef.current?.play?.();
+      } else {
+        bgAudio?.pause();
+        voiceAudioRef.current?.pause?.();
+      }
+      return next;
+    });
+  };
 
   const skipToNextPhase = () => {
     if (currentPhase < meditation.length - 1) {
@@ -220,8 +279,6 @@ export default function MeditationSessionPage() {
     phaseProgress
   );
   const backgroundColor = toHSL(interpolated);
-
-  const phase = meditation[currentPhase];
   const phaseDuration = phase?.theme?.duration || 90;
   const phaseProgressPercent = (timeInPhase / phaseDuration) * 100;
   const totalProgress =
@@ -299,7 +356,7 @@ export default function MeditationSessionPage() {
               textVisible ? "opacity-90" : "opacity-0"
             }`}
           >
-            {phase?.text}
+            {textVisible ? displayedText : ""}
           </p>
 
           {/* Phase progress */}
