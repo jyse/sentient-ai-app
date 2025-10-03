@@ -87,7 +87,6 @@ export default function MeditationSessionPage() {
 
   // Voice narration uses a ref (single source of truth)
   const voiceAudioRef = useRef<HTMLAudioElement | null>(null);
-  const ttsAbortRef = useRef<AbortController | null>(null);
   const currentPhaseRef = useRef(0);
 
   useEffect(() => {
@@ -125,35 +124,61 @@ export default function MeditationSessionPage() {
         const stored = localStorage.getItem("currentMeditation");
         if (stored) {
           try {
-            setMeditation(JSON.parse(stored));
+            const parsed: MeditationPhase[] = JSON.parse(stored);
+            setMeditation(parsed);
+            // 🎤 Pre-generate TTS for all phases
+            const cache: Record<number, string> = {};
+            await Promise.all(
+              parsed.map(async (phase, i) => {
+                try {
+                  const res = await fetch("/api/tts", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ text: phase.text })
+                  });
+                  if (!res.ok) throw new Error("TTS failed");
+                  const blob = await res.blob();
+                  cache[i] = URL.createObjectURL(blob);
+                } catch (err) {
+                  console.error("TTS preload failed", i, err);
+                }
+              })
+            );
+            ttsCacheRef.current = cache;
           } catch {
             console.error("Failed to parse meditation from localStorage");
           }
         }
 
+        if (bgAudio) {
+          bgAudio.pause();
+          bgAudio.src = "";
+        }
         // Start background music for target emotion
         const music = new Audio(`/music/${data.target_emotion}.mp3`);
         music.loop = true;
         music.volume = 0.35;
         setBgAudio(music);
       }
-
       setLoading(false);
     };
 
     fetchData();
-  }, [entryId, router]);
+  }, [entryId, router, bgAudio]);
 
   useEffect(() => {
     return () => {
       try {
         bgAudio?.pause();
+        if (bgAudio) bgAudio.src = "";
         if (voiceAudioRef.current) {
           voiceAudioRef.current.pause();
+          if (voiceAudioRef.current.src.startsWith("blob:")) {
+            URL.revokeObjectURL(voiceAudioRef.current.src);
+          }
           voiceAudioRef.current.src = "";
           voiceAudioRef.current = null;
         }
-        ttsAbortRef.current?.abort();
       } catch {}
     };
   }, [bgAudio]);
@@ -161,56 +186,26 @@ export default function MeditationSessionPage() {
   // TTS for each phase when playing
   useEffect(() => {
     if (!isPlaying) return;
-    const p = meditation[currentPhase];
-    if (!p?.text) return;
 
-    // stop previous voice
-    if (voiceAudioRef.current) {
-      voiceAudioRef.current.pause();
-      voiceAudioRef.current.src = "";
-      voiceAudioRef.current = null;
-    }
+    voiceAudioRef.current?.pause();
+    voiceAudioRef.current = null;
 
-    // abort previous fetch
-    ttsAbortRef.current?.abort();
-    const ctrl = new AbortController();
-    ttsAbortRef.current = ctrl;
+    const url = ttsCacheRef.current[currentPhase];
+    if (url) {
+      const audio = new Audio(url);
+      voiceAudioRef.current = audio;
 
-    (async () => {
-      try {
-        const res = await fetch("/api/tts", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: p.text }),
-          signal: ctrl.signal
-        });
-        if (!res.ok) throw new Error("TTS failed");
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const audio = new Audio(url);
-        voiceAudioRef.current = audio;
-
-        // Revoke blob URL after playback ends to free memory
-        const onEnded = () => {
+      audio.addEventListener("ended", () => {
+        if (url.startsWith("blob:")) {
           URL.revokeObjectURL(url);
-          audio.removeEventListener("ended", onEnded);
-        };
-        audio.addEventListener("ended", onEnded);
-
-        // Play (may require use gesture on first attempt)
-        await audio.play().catch(() => {
-          /* user must press play first */
-        });
-      } catch (e) {
-        if (!(e instanceof DOMException && e.name === "AbortError")) {
-          console.error(e);
         }
-      }
-    })();
-    return () => {
-      // leave controller to be aborted by next run or unmount
-    };
-  }, [isPlaying, currentPhase, meditation]);
+      });
+
+      audio.play().catch(() => {
+        /* user must click Play first */
+      });
+    }
+  }, [isPlaying, currentPhase]);
 
   const completeMeditation = useCallback(async () => {
     setIsPlaying(false);
@@ -410,7 +405,7 @@ export default function MeditationSessionPage() {
               textVisible ? "opacity-100" : "opacity-0"
             }`}
           >
-            {phase?.phase}
+            {phase?.phase || "Meditation"}
           </h2>
 
           <p
