@@ -107,7 +107,7 @@ export default function CheckInPage() {
     setFeedback("Mood saved! Redirectin...");
     console.log("✅ Mood saved");
     setTimeout(() => {
-      router.push(`/meditation/intention?entry_id=${data.id}`);
+      router.push(`/meditation/direction?entry_id=${data.id}`);
     }, 800);
   };
 
@@ -168,7 +168,8 @@ export default function CheckInPage() {
           </label>
           <p className="text-xs text-gray-400 mb-2">
             Only you can see this. It is stored privately in your account to
-            help guide your meditation.
+            help guide your meditation. For personalized meditations, your mood
+            may be shared with our AI service, but never with your identity
           </p>
           <textarea
             value={note}

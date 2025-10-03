@@ -215,6 +215,28 @@ export default function ProfilePage() {
           </div>
         </div>
 
+        {/* Data & Privacy Section */}
+        <div className="bg-gray-900/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-800 mb-8">
+          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+            🔒 Data & Privacy
+          </h2>
+          <div className="space-y-3 text-sm text-gray-300">
+            <p>
+              <strong>What we store:</strong> Your moods and notes are saved
+              privately in your account (only visible to you).
+            </p>
+            <p>
+              <strong>What we share:</strong> For personalized meditations, only
+              your mood + note text may be sent to our AI service — never your
+              identity (like your email).
+            </p>
+            <p>
+              <strong>How long:</strong> Entries stay in your account until you
+              delete them.
+            </p>
+          </div>
+        </div>
+
         {/* Actions */}
         <div className="flex gap-4 justify-center">
           <Button

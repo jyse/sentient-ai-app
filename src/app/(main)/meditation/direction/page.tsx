@@ -9,7 +9,7 @@ import {
   getEmotionDisplay
 } from "@/lib/emotionProgressions";
 
-export default function MeditationIntentionPage() {
+export default function MeditationDirectionPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const entryId = searchParams.get("entry_id");
@@ -111,16 +111,19 @@ export default function MeditationIntentionPage() {
 
         {/* Header */}
         <h2 className="text-2xl font-semibold mb-2 text-center">
-          Set your intention
+          Choose Your Direction
         </h2>
+        {/* Guidance */}
         <p className="text-gray-400 text-sm mb-4 text-center max-w-md">
-          We guide you step by step — for example, from sadness toward calmness,
-          not all the way to joy in one leap.
+          We’ll guide you gently, helping you shift from your current mood
+          toward a calmer, lighter state.
         </p>
+        {/* Direction */}
         <p className="text-gray-400 text-sm mb-6 text-center max-w-md">
           You are feeling{" "}
-          <span className="text-white font-medium">{currentMood}</span>. Where
-          would you like this meditation to guide you?
+          <span className="text-white font-medium">{currentMood}</span> right
+          now. Choose the feeling you’d like this meditation to guide you
+          toward.
         </p>
 
         {/* Mood Transition Visual */}
@@ -176,7 +179,7 @@ export default function MeditationIntentionPage() {
             Back
           </Button>
           <Button onClick={handleSubmit} disabled={!selectedTarget || loading}>
-            {loading ? "Saving..." : "Continue"}
+            {loading ? "Saving..." : "Guide me"}
           </Button>
         </div>
       </div>
