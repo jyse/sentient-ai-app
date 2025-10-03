@@ -11,6 +11,27 @@ type MoodEntry = {
   note: string | null;
 };
 
+export type MeditationTheme = {
+  duration?: number;
+  color?: string;
+  [key: string]: string | number | undefined;
+};
+
+export type MeditationPhase = {
+  phase: string;
+  text: string;
+  theme?: MeditationTheme;
+};
+
+// [
+// { "phase": "Awareness", "text": "Notice how you're feeling...", "theme": { "duration": 90 } },
+// { "phase": "Acceptance", "text": "Allow this feeling to be here...", "theme": { "duration": 90 } },
+// { "phase": "Processing", "text": "Take a slow breath in...", "theme": { "duration": 90 } },
+// { "phase": "Reframing", "text": "Notice new possibilities emerging...", "theme": { "duration": 90 } },
+// { "phase": "Integration", "text": "Feel this new calm settling in...", "theme": { "duration": 90 } },
+// { "phase": "Maintenance", "text": "Remember you can return here anytime...", "theme": { "duration": 90 } }
+// ]
+
 export default function MeditationReadyPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -19,7 +40,7 @@ export default function MeditationReadyPage() {
   const [entry, setEntry] = useState<MoodEntry | null>(null);
   const [loadingStep, setLoadingStep] = useState(0);
   const [countdown, setCountdown] = useState<number | null>(null);
-  const [meditation, setMeditation] = useState<any[] | null>(null);
+  const [meditation, setMeditation] = useState<MeditationPhase[] | null>(null);
 
   // Fetch entry
   useEffect(() => {
@@ -51,7 +72,7 @@ export default function MeditationReadyPage() {
           })
         });
 
-        const meditationJson = await response.json();
+        const meditationJson: MeditationPhase[] = await response.json();
         setMeditation(meditationJson);
         localStorage.setItem(
           "currentMeditation",

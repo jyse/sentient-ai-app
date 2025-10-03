@@ -6,46 +6,6 @@ import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Pause, Play, SkipForward } from "lucide-react";
 
-// 🎯 TODO: Replace with RAG retrieval
-const STATIC_PHASES = [
-  {
-    name: "Awareness",
-    guidance:
-      "Notice how you're feeling right now. There's no need to change anything. Just observe with gentle curiosity.",
-    duration: 90 // seconds per phase
-  },
-  {
-    name: "Acceptance",
-    guidance:
-      "Whatever you're feeling is okay. It belongs here. Let it exist without needing to fix or change it.",
-    duration: 90
-  },
-  {
-    name: "Processing",
-    guidance:
-      "Breathe into this feeling. With each breath, create a little more space around it. You're safe here.",
-    duration: 90
-  },
-  {
-    name: "Reframing",
-    guidance:
-      "Notice any shift, however small. You're beginning to move. There's movement even in stillness.",
-    duration: 90
-  },
-  {
-    name: "Integration",
-    guidance:
-      "Feel yourself here, grounded and present. This new feeling is becoming part of you now.",
-    duration: 90
-  },
-  {
-    name: "Maintenance",
-    guidance:
-      "Carry this with you. You can return to this place whenever you need. It's always here for you.",
-    duration: 90
-  }
-];
-
 // Emotion color mapping
 const EMOTION_COLORS: Record<
   string,
@@ -70,6 +30,12 @@ type MoodEntry = {
   note: string | null;
 };
 
+type Phase = {
+  phase: string;
+  text: string;
+  theme?: any;
+};
+
 function interpolateColor(
   from: { hue: number; sat: number; light: number },
   to: { hue: number; sat: number; light: number },
@@ -86,20 +52,34 @@ function toHSL(color: { hue: number; sat: number; light: number }) {
   return `hsl(${color.hue}, ${color.sat}%, ${color.light}%)`;
 }
 
+export type MeditationTheme = {
+  duration?: number;
+  color?: string;
+  [key: string]: string | number | undefined;
+};
+
+export type MeditationPhase = {
+  phase: string;
+  text: string;
+  theme?: MeditationTheme;
+};
+
 export default function MeditationSessionPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const entryId = searchParams.get("entry_id");
 
   const [entry, setEntry] = useState<MoodEntry | null>(null);
+
   const [currentPhase, setCurrentPhase] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [timeInPhase, setTimeInPhase] = useState(0);
   const [textVisible, setTextVisible] = useState(false);
   const [sessionComplete, setSessionComplete] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [meditation, setMeditation] = useState<MeditationPhase[]>([]);
 
-  // Fetch mood entry
+  // Fetch mood entry + meditation JSON
   useEffect(() => {
     const fetchEntry = async () => {
       if (!entryId) {
@@ -107,6 +87,7 @@ export default function MeditationSessionPage() {
         return;
       }
 
+      // Get entry from Supabase
       const { data } = await supabase
         .from("mood_entries")
         .select("id, current_emotion, target_emotion, note")
@@ -116,6 +97,13 @@ export default function MeditationSessionPage() {
       if (data) {
         setEntry(data);
       }
+
+      // Get meditation JSON from localStorage
+      const stored = localStorage.getItem("currentMeditation");
+      if (stored) {
+        setMeditation(JSON.parse(stored));
+      }
+
       setLoading(false);
     };
 
@@ -138,12 +126,14 @@ export default function MeditationSessionPage() {
 
     const interval = setInterval(() => {
       setTimeInPhase((prev) => {
-        const phase = STATIC_PHASES[currentPhase];
+        const phase = meditation[currentPhase];
         const newTime = prev + 1;
 
-        // Auto-advance to next phase when time runs out
-        if (newTime >= phase.duration) {
-          if (currentPhase < STATIC_PHASES.length - 1) {
+        if (!phase?.theme?.duration) return newTime; // fallback
+
+        // Auto-advance to next phase
+        if (newTime >= (phase.theme.duration || 90)) {
+          if (currentPhase < meditation.length - 1) {
             setCurrentPhase(currentPhase + 1);
             return 0;
           } else {
@@ -157,14 +147,14 @@ export default function MeditationSessionPage() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isPlaying, currentPhase]);
+  }, [isPlaying, currentPhase, meditation]);
 
   const togglePlayPause = () => {
     setIsPlaying(!isPlaying);
   };
 
   const skipToNextPhase = () => {
-    if (currentPhase < STATIC_PHASES.length - 1) {
+    if (currentPhase < meditation.length - 1) {
       setCurrentPhase(currentPhase + 1);
       setTimeInPhase(0);
     } else {
@@ -204,7 +194,7 @@ export default function MeditationSessionPage() {
     );
   }
 
-  if (!entry || !entry.target_emotion) {
+  if (!entry || !entry.target_emotion || !meditation.length) {
     return (
       <div className="min-h-screen bg-purple-950 flex flex-col items-center justify-center text-white gap-4">
         <p>Something went wrong.</p>
@@ -222,12 +212,12 @@ export default function MeditationSessionPage() {
     );
   }
 
-  // Calculate colors
+  // Colors → interpolate between current and target emotion
   const currentColor =
     EMOTION_COLORS[entry.current_emotion] || EMOTION_COLORS.calm;
   const targetColor =
     EMOTION_COLORS[entry.target_emotion] || EMOTION_COLORS.peaceful;
-  const phaseProgress = currentPhase / (STATIC_PHASES.length - 1);
+  const phaseProgress = currentPhase / (meditation.length - 1);
   const interpolated = interpolateColor(
     currentColor,
     targetColor,
@@ -235,11 +225,11 @@ export default function MeditationSessionPage() {
   );
   const backgroundColor = toHSL(interpolated);
 
-  const phase = STATIC_PHASES[currentPhase];
-  const phaseProgressPercent = (timeInPhase / phase.duration) * 100;
+  const phase = meditation[currentPhase];
+  const phaseDuration = phase?.theme?.duration || 90;
+  const phaseProgressPercent = (timeInPhase / phaseDuration) * 100;
   const totalProgress =
-    ((currentPhase + timeInPhase / phase.duration) / STATIC_PHASES.length) *
-    100;
+    ((currentPhase + timeInPhase / phaseDuration) / meditation.length) * 100;
 
   return (
     <>
@@ -281,89 +271,70 @@ export default function MeditationSessionPage() {
 
         {/* Phase indicator */}
         <div className="absolute top-8 text-sm opacity-60">
-          Phase {currentPhase + 1} of {STATIC_PHASES.length}
+          Phase {currentPhase + 1} of {meditation.length}
         </div>
 
         {/* Main content */}
         <div className="max-w-2xl px-8 text-center space-y-8 relative">
-          {/* Breathing circle - floats behind text */}
+          {/* Breathing circle */}
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 pointer-events-none">
             <div className="relative w-56 h-56">
-              {/* Outer ring */}
               <div
                 className="absolute inset-0 rounded-full border-2 border-white/40"
                 style={{
                   animation: "breathe 6s ease-in-out infinite"
                 }}
               />
-              {/* Middle ring */}
               <div
                 className="absolute inset-8 rounded-full border-2 border-white/30"
                 style={{
                   animation: "breathe 6s ease-in-out infinite 0.7s"
                 }}
               />
-              {/* Inner ring */}
               <div
                 className="absolute inset-16 rounded-full border-2 border-white/20"
                 style={{
                   animation: "breathe 6s ease-in-out infinite 1.4s"
                 }}
               />
-              {/* Center glow */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div
-                  className="w-10 h-10 rounded-full bg-white/50 backdrop-blur-sm shadow-lg"
-                  style={{ boxShadow: "0 0 30px rgba(255, 255, 255, 0.4)" }}
-                />
-              </div>
             </div>
           </div>
 
-          {/* Text content - now renders after circle in DOM */}
+          {/* Text */}
           <h2
             className={`text-3xl font-semibold transition-opacity duration-1000 relative mt-64 ${
               textVisible ? "opacity-100" : "opacity-0"
             }`}
           >
-            {phase.name}
+            {phase?.phase}
           </h2>
-
           <p
             className={`text-xl leading-relaxed max-w-lg mx-auto transition-opacity duration-1500 delay-500 relative ${
               textVisible ? "opacity-90" : "opacity-0"
             }`}
           >
-            {phase.guidance}
+            {phase?.text}
           </p>
 
           {/* Phase progress indicator */}
           <div className="pt-8 relative">
-            <div className="w-64 h-2 bg-white/10 backdrop-blur-sm rounded-full mx-auto overflow-hidden border border-white/20 shadow-inner">
+            <div className="w-64 h-2 bg-white/10 rounded-full mx-auto overflow-hidden">
               <div
-                className="h-full bg-white/70 backdrop-blur-sm shadow-lg transition-all duration-300"
-                style={{
-                  width: `${phaseProgressPercent}%`,
-                  boxShadow: "0 0 12px rgba(255, 255, 255, 0.5)"
-                }}
+                className="h-full bg-white/70 transition-all duration-300"
+                style={{ width: `${phaseProgressPercent}%` }}
               />
             </div>
             <p className="text-sm text-white/60 mt-3 font-light">
-              {Math.floor(timeInPhase)}s / {phase.duration}s
+              {Math.floor(timeInPhase)}s / {phaseDuration}s
             </p>
           </div>
         </div>
 
-        {/* Player controls - Glassmorphic style */}
+        {/* Player controls */}
         <div className="fixed bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-white/10 backdrop-blur-xl px-6 py-3 rounded-full border border-white/20 shadow-2xl">
-          {/* Play/Pause - Main control */}
           <button
             onClick={togglePlayPause}
-            className="relative w-16 h-16 flex items-center justify-center bg-white/90 backdrop-blur-sm text-black rounded-full shadow-lg hover:bg-white hover:scale-105 transition-all active:scale-95"
-            style={{
-              boxShadow:
-                "0 8px 32px rgba(255, 255, 255, 0.2), inset 0 -2px 8px rgba(0, 0, 0, 0.1)"
-            }}
+            className="w-16 h-16 flex items-center justify-center bg-white/90 text-black rounded-full shadow-lg hover:scale-105 transition-all"
           >
             {isPlaying ? (
               <Pause size={28} fill="currentColor" />
@@ -371,28 +342,20 @@ export default function MeditationSessionPage() {
               <Play size={28} fill="currentColor" className="ml-1" />
             )}
           </button>
-
-          {/* Skip button */}
           <button
             onClick={skipToNextPhase}
-            className="w-12 h-12 flex items-center justify-center text-white bg-white/5 backdrop-blur-sm rounded-full border border-white/10 hover:bg-white/15 hover:border-white/20 transition-all active:scale-95"
+            className="w-12 h-12 flex items-center justify-center text-white bg-white/5 rounded-full border border-white/10 hover:bg-white/15 transition-all"
           >
             <SkipForward size={20} />
           </button>
-
-          {/* Divider */}
           <div className="h-8 w-px bg-white/20" />
-
-          {/* End session */}
           <button
             onClick={completeMeditation}
-            className="px-4 py-2 text-sm text-white/80 hover:text-white bg-white/5 backdrop-blur-sm rounded-full hover:bg-white/10 transition-all"
+            className="px-4 py-2 text-sm text-white/80 hover:text-white bg-white/5 rounded-full hover:bg-white/10 transition-all"
           >
             End Session
           </button>
         </div>
-
-        {/* 🎯 TODO: Add audio element here for voice playback */}
       </div>
     </>
   );
