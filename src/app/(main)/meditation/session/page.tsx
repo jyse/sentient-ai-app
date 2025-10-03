@@ -83,14 +83,25 @@ export default function MeditationSessionPage() {
   const [sessionComplete, setSessionComplete] = useState(false);
   const [loading, setLoading] = useState(true);
   const [bgAudio, setBgAudio] = useState<HTMLAudioElement | null>(null);
-  const [voiceAudio, setVoiceAudio] = useState<HTMLAudioElement | null>(null);
+  const ttsCacheRef = useRef<Record<number, string>>({});
+
+  // Voice narration uses a ref (single source of truth)
   const voiceAudioRef = useRef<HTMLAudioElement | null>(null);
+  const ttsAbortRef = useRef<AbortController | null>(null);
   const currentPhaseRef = useRef(0);
-  const phase = meditation[currentPhase]; // may be undefined; that's fine
-  const displayedText = useTypewriter(phase?.text ?? "");
 
   useEffect(() => {
     currentPhaseRef.current = currentPhase;
+  }, [currentPhase]);
+
+  const phase = meditation[currentPhase];
+  const displayedText = useTypewriter(phase?.text ?? "");
+
+  // Fade text in on phase change
+  useEffect(() => {
+    setTextVisible(false);
+    const t = setTimeout(() => setTextVisible(true), 200);
+    return () => clearTimeout(t);
   }, [currentPhase]);
 
   // Fetch entry and meditation
@@ -134,40 +145,81 @@ export default function MeditationSessionPage() {
   }, [entryId, router]);
 
   useEffect(() => {
+    return () => {
+      try {
+        bgAudio?.pause();
+        if (voiceAudioRef.current) {
+          voiceAudioRef.current.pause();
+          voiceAudioRef.current.src = "";
+          voiceAudioRef.current = null;
+        }
+        ttsAbortRef.current?.abort();
+      } catch {}
+    };
+  }, [bgAudio]);
+
+  // TTS for each phase when playing
+  useEffect(() => {
     if (!isPlaying) return;
     const p = meditation[currentPhase];
     if (!p?.text) return;
 
-    // stop previous
-    voiceAudioRef.current?.pause();
-    voiceAudioRef.current = null;
+    // stop previous voice
+    if (voiceAudioRef.current) {
+      voiceAudioRef.current.pause();
+      voiceAudioRef.current.src = "";
+      voiceAudioRef.current = null;
+    }
+
+    // abort previous fetch
+    ttsAbortRef.current?.abort();
+    const ctrl = new AbortController();
+    ttsAbortRef.current = ctrl;
 
     (async () => {
       try {
         const res = await fetch("/api/tts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: p.text })
+          body: JSON.stringify({ text: p.text }),
+          signal: ctrl.signal
         });
         if (!res.ok) throw new Error("TTS failed");
         const blob = await res.blob();
         const url = URL.createObjectURL(blob);
         const audio = new Audio(url);
         voiceAudioRef.current = audio;
-        audio.play().catch(() => {
-          /* user must press play */
+
+        // Revoke blob URL after playback ends to free memory
+        const onEnded = () => {
+          URL.revokeObjectURL(url);
+          audio.removeEventListener("ended", onEnded);
+        };
+        audio.addEventListener("ended", onEnded);
+
+        // Play (may require use gesture on first attempt)
+        await audio.play().catch(() => {
+          /* user must press play first */
         });
       } catch (e) {
-        console.error(e);
+        if (!(e instanceof DOMException && e.name === "AbortError")) {
+          console.error(e);
+        }
       }
     })();
+    return () => {
+      // leave controller to be aborted by next run or unmount
+    };
   }, [isPlaying, currentPhase, meditation]);
 
   const completeMeditation = useCallback(async () => {
     setIsPlaying(false);
     setSessionComplete(true);
-    bgAudio?.pause();
-    voiceAudio?.pause();
+
+    try {
+      bgAudio?.pause();
+      voiceAudioRef.current?.pause?.();
+    } catch {}
 
     const {
       data: { user }
@@ -185,35 +237,42 @@ export default function MeditationSessionPage() {
     }
 
     setTimeout(() => router.push("/profile"), 2500);
-  }, [entryId, totalTimeElapsed, router, bgAudio, voiceAudio]);
+  }, [entryId, totalTimeElapsed, router, bgAudio]);
 
-  // Playback timer
+  // Playback timer (stable: not stale state)
   useEffect(() => {
     if (!isPlaying || meditation.length === 0) return;
 
     const interval = setInterval(() => {
-      setTimeInPhase((prev) => prev + 1);
       setTotalTimeElapsed((prev) => prev + 1);
 
-      const phase = meditation[currentPhaseRef.current];
-      const duration = phase?.theme?.duration || 90;
+      setTimeInPhase((prev) => {
+        const active = meditation[currentPhaseRef.current];
+        const duration = active?.theme?.duration ?? 90;
+        const next = prev + 1;
 
-      if (timeInPhase + 1 >= duration) {
-        if (currentPhaseRef.current < meditation.length - 1) {
-          setCurrentPhase((p) => {
-            const next = p + 1;
-            currentPhaseRef.current = next;
-            return next;
-          });
-          setTimeInPhase(0);
-        } else {
-          completeMeditation();
+        if (next >= duration) {
+          if (currentPhaseRef.current < meditation.length - 1) {
+            setCurrentPhase((p) => {
+              const n = p + 1;
+              currentPhaseRef.current = n;
+              return n;
+            });
+            return 0; // reset for next phase
+          } else {
+            clearInterval(interval);
+            // call after state flush
+            setTimeout(() => completeMeditation(), 0);
+            return prev;
+          }
         }
-      }
+
+        return next;
+      });
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isPlaying, meditation, timeInPhase, completeMeditation]);
+  }, [isPlaying, meditation, completeMeditation]);
 
   const togglePlayPause = () => {
     setIsPlaying((p) => {
@@ -231,6 +290,9 @@ export default function MeditationSessionPage() {
 
   const skipToNextPhase = () => {
     if (currentPhase < meditation.length - 1) {
+      voiceAudioRef.current?.pause?.();
+      voiceAudioRef.current = null;
+
       setCurrentPhase((p) => {
         const next = p + 1;
         currentPhaseRef.current = next;
