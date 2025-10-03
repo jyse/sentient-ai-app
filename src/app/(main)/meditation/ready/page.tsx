@@ -19,6 +19,7 @@ export default function MeditationReadyPage() {
   const [entry, setEntry] = useState<MoodEntry | null>(null);
   const [loadingStep, setLoadingStep] = useState(0);
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [meditation, setMeditation] = useState<any[] | null>(null);
 
   // Fetch entry
   useEffect(() => {
@@ -37,8 +38,26 @@ export default function MeditationReadyPage() {
         .single();
 
       if (data) {
+        // Inside fetchEntry, after `if (data) { ... }`:
         setEntry(data);
-        // Start the preparation sequence
+        // 👇 New: call /api/generate with this entry
+        const response = await fetch("/api/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            currentEmotion: data.current_emotion,
+            targetEmotion: data.target_emotion,
+            note: data.note
+          })
+        });
+
+        const meditationJson = await response.json();
+        setMeditation(meditationJson);
+        localStorage.setItem(
+          "currentMeditation",
+          JSON.stringify(meditationJson)
+        );
+
         startPreparation();
       }
     };
