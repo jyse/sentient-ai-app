@@ -67,13 +67,50 @@ export default function MeditationSessionPage() {
 
   const [entry, setEntry] = useState<MoodEntry | null>(null);
   const [meditation, setMeditation] = useState<MeditationPhase[]>([]);
-
   const [currentPhase, setCurrentPhase] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [timeInPhase, setTimeInPhase] = useState(0);
   const [textVisible, setTextVisible] = useState(false);
   const [sessionComplete, setSessionComplete] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
+
+  // ⏱ Phase timer
+  useEffect(() => {
+    if (!isPlaying) return;
+
+    const interval = setInterval(() => {
+      setTimeInPhase((prevTime) => {
+        const phase = meditation[currentPhase];
+        const duration = phase?.theme?.duration || 90;
+        const newTime = prevTime + 1;
+
+        if (newTime >= duration) {
+          setCurrentPhase((prevPhase) => {
+            if (prevPhase < meditation.length - 1) {
+              return prevPhase + 1;
+            } else {
+              completeMeditation();
+              return prevPhase;
+            }
+          });
+          return 0; // reset timer
+        }
+
+        return newTime;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isPlaying, meditation]); // 👈 no `currentPhase` here
+
+  useEffect(() => {
+    if (isPlaying && audio) {
+      audio.play();
+    } else {
+      audio?.pause();
+    }
+  }, [isPlaying, audio]);
 
   // 🗂 Fetch mood entry + meditation JSON
   useEffect(() => {
@@ -111,32 +148,6 @@ export default function MeditationSessionPage() {
     }, 500);
     return () => clearTimeout(timer);
   }, [currentPhase]);
-
-  // ⏱ Phase timer
-  useEffect(() => {
-    if (!isPlaying) return;
-
-    const interval = setInterval(() => {
-      setTimeInPhase((prev) => {
-        const phase = meditation[currentPhase];
-        const duration = phase?.theme?.duration || 90;
-        const newTime = prev + 1;
-
-        if (newTime >= duration) {
-          if (currentPhase < meditation.length - 1) {
-            setCurrentPhase(currentPhase + 1);
-            return 0;
-          } else {
-            completeMeditation();
-            return prev;
-          }
-        }
-        return newTime;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [isPlaying, currentPhase, meditation]);
 
   const togglePlayPause = () => setIsPlaying(!isPlaying);
 
