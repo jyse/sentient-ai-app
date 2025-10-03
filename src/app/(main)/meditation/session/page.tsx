@@ -55,7 +55,7 @@ function toHSL(color: { hue: number; sat: number; light: number }) {
 }
 
 // 🔤 Optional typewriter hook
-function useTypewriter(text: string, duration = 5000) {
+function useTypewriter(text: string, duration = 10000) {
   const [displayed, setDisplayed] = useState<string>("");
 
   useEffect(() => {
@@ -101,7 +101,9 @@ export default function MeditationSessionPage() {
 
   const phase = meditation[currentPhase];
   // Toggle this line 👇 if you want typewriter instead of plain text
-  // const displayedText = useTypewriter(phase?.text ?? "", 5000);
+  const narrationDuration =
+    (ttsCacheRef.current as any)[`${currentPhase}-duration`] || 10000;
+  const displayedText = useTypewriter(phase?.text ?? "", narrationDuration);
 
   // Fade text on phase change
   useEffect(() => {
@@ -419,7 +421,7 @@ export default function MeditationSessionPage() {
             }`}
           >
             {/* Toggle displayedText for typewriter, or just phase.text */}
-            {phase?.text}
+            {displayedText}
           </p>
 
           <div className="pt-8 relative">
