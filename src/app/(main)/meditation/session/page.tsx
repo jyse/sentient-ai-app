@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Pause, Play, SkipForward } from "lucide-react";
 
+// ✅ FIXED TYPE
 const EMOTION_COLORS: Record<
   string,
   { hue: number; sat: number; light: number }
@@ -53,6 +54,7 @@ function toHSL(color: { hue: number; sat: number; light: number }) {
   return `hsl(${color.hue}, ${color.sat}%, ${color.light}%)`;
 }
 
+// 🔤 Optional typewriter hook
 function useTypewriter(text: string, duration = 5000) {
   const [displayed, setDisplayed] = useState<string>("");
 
@@ -68,6 +70,7 @@ function useTypewriter(text: string, duration = 5000) {
     }, speed);
     return () => clearInterval(interval);
   }, [text, duration]);
+
   return displayed;
 }
 
@@ -75,6 +78,7 @@ export default function MeditationSessionPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const entryId = searchParams.get("entry_id");
+
   const [entry, setEntry] = useState<MoodEntry | null>(null);
   const [meditation, setMeditation] = useState<MeditationPhase[]>([]);
   const [currentPhase, setCurrentPhase] = useState(0);
@@ -84,28 +88,29 @@ export default function MeditationSessionPage() {
   const [textVisible, setTextVisible] = useState(false);
   const [sessionComplete, setSessionComplete] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [bgAudio, setBgAudio] = useState<HTMLAudioElement | null>(null);
-  const ttsCacheRef = useRef<Record<number, string>>({});
 
-  // Voice narration uses a ref (single source of truth)
+  const bgAudioRef = useRef<HTMLAudioElement | null>(null);
   const voiceAudioRef = useRef<HTMLAudioElement | null>(null);
+  const ttsCacheRef = useRef<Record<number, string>>({});
   const currentPhaseRef = useRef(0);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     currentPhaseRef.current = currentPhase;
   }, [currentPhase]);
 
   const phase = meditation[currentPhase];
-  const displayedText = useTypewriter(phase?.text ?? "", 5000);
+  // Toggle this line 👇 if you want typewriter instead of plain text
+  // const displayedText = useTypewriter(phase?.text ?? "", 5000);
 
-  // Fade text in on phase change
+  // Fade text on phase change
   useEffect(() => {
     setTextVisible(false);
     const t = setTimeout(() => setTextVisible(true), 200);
     return () => clearTimeout(t);
   }, [currentPhase]);
 
-  // Fetch entry and meditation
+  // Fetch entry and meditation, pre-generate TTS
   useEffect(() => {
     const fetchData = async () => {
       if (!entryId) {
@@ -122,13 +127,13 @@ export default function MeditationSessionPage() {
       if (data) {
         setEntry(data);
 
-        // 🐲 check things now maybe not in localstorage
         const stored = localStorage.getItem("currentMeditation");
         if (stored) {
           try {
             const parsed: MeditationPhase[] = JSON.parse(stored);
             setMeditation(parsed);
-            // 🎤 Pre-generate TTS for all phases
+
+            // Pre-generate TTS
             const cache: Record<number, string> = {};
             await Promise.all(
               parsed.map(async (phase, i) => {
@@ -149,76 +154,68 @@ export default function MeditationSessionPage() {
             );
             ttsCacheRef.current = { ...ttsCacheRef.current, ...cache };
           } catch {
-            console.error("Failed to parse meditation from localStorage");
+            console.error("Failed to parse meditation");
           }
         }
 
-        if (bgAudio) {
-          bgAudio.pause();
-          bgAudio.src = "";
-        }
-        // Start background music for target emotion
+        // Background music setup
         const music = new Audio(`/music/${data.target_emotion}.mp3`);
         music.loop = true;
         music.volume = 0.35;
-        setBgAudio(music);
+        bgAudioRef.current = music;
       }
       setLoading(false);
     };
 
     fetchData();
-  }, [entryId, router, bgAudio]);
+  }, [entryId, router]);
 
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      try {
-        bgAudio?.pause();
-        if (bgAudio) bgAudio.src = "";
-        if (voiceAudioRef.current) {
-          voiceAudioRef.current.pause();
-          if (voiceAudioRef.current.src.startsWith("blob:")) {
-            URL.revokeObjectURL(voiceAudioRef.current.src);
-          }
-          voiceAudioRef.current.src = "";
-          voiceAudioRef.current = null;
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      bgAudioRef.current?.pause();
+      if (voiceAudioRef.current) {
+        voiceAudioRef.current.pause();
+        if (voiceAudioRef.current.src.startsWith("blob:")) {
+          URL.revokeObjectURL(voiceAudioRef.current.src);
         }
-      } catch {}
-    };
-  }, [bgAudio]);
-
-  // TTS for each phase when playing
-  useEffect(() => {
-    if (!entry || !meditation.length) return;
-
-    // start background music immediately
-    if (bgAudio) {
-      bgAudio.play().catch(() => {
-        console.warn("Autoplay blocked for bgAudio");
+      }
+      Object.values(ttsCacheRef.current).forEach((url) => {
+        if (url.startsWith("blob:")) URL.revokeObjectURL(url);
       });
+    };
+  }, []);
+
+  // Play voice narration on phase change
+  useEffect(() => {
+    if (!isPlaying) return;
+
+    // Stop old audio
+    if (voiceAudioRef.current) {
+      voiceAudioRef.current.pause();
+      if (voiceAudioRef.current.src.startsWith("blob:")) {
+        URL.revokeObjectURL(voiceAudioRef.current.src);
+      }
+      voiceAudioRef.current = null;
     }
 
-    // play first narration automatically
-    const url = ttsCacheRef.current[0];
-    if (url && !voiceAudioRef.current) {
+    // Play new phase audio
+    const url = ttsCacheRef.current[currentPhase];
+    if (url) {
       const audio = new Audio(url);
       voiceAudioRef.current = audio;
-      audio.play().catch(() => {
-        console.warn("Autoplay blocked for narration");
-      });
+      audio.play().catch((err) => console.warn("Audio play failed:", err));
     }
-
-    // set playing state true so timer starts
-    setIsPlaying(true);
-  }, [entry, meditation, bgAudio]);
+  }, [currentPhase, isPlaying]);
 
   const completeMeditation = useCallback(async () => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
     setIsPlaying(false);
     setSessionComplete(true);
 
-    try {
-      bgAudio?.pause();
-      voiceAudioRef.current?.pause?.();
-    } catch {}
+    bgAudioRef.current?.pause();
+    voiceAudioRef.current?.pause();
 
     const {
       data: { user }
@@ -236,13 +233,16 @@ export default function MeditationSessionPage() {
     }
 
     setTimeout(() => router.push("/profile"), 2500);
-  }, [entryId, totalTimeElapsed, router, bgAudio]);
+  }, [entryId, totalTimeElapsed, router]);
 
-  // Playback timer (stable: not stale state)
+  // Playback timer
   useEffect(() => {
-    if (!isPlaying || meditation.length === 0) return;
+    if (!isPlaying || meditation.length === 0) {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      return;
+    }
 
-    const interval = setInterval(() => {
+    intervalRef.current = setInterval(() => {
       setTotalTimeElapsed((prev) => prev + 1);
 
       setTimeInPhase((prev) => {
@@ -257,41 +257,45 @@ export default function MeditationSessionPage() {
               currentPhaseRef.current = n;
               return n;
             });
-            return 0; // reset for next phase
+            return 0;
           } else {
-            clearInterval(interval);
-            // call after state flush
-            setTimeout(() => completeMeditation(), 0);
+            completeMeditation();
             return prev;
           }
         }
-
         return next;
       });
     }, 1000);
 
-    return () => clearInterval(interval);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
   }, [isPlaying, meditation, completeMeditation]);
 
   const togglePlayPause = () => {
     setIsPlaying((p) => {
       const next = !p;
       if (next) {
-        bgAudio?.play().catch(() => {});
-        voiceAudioRef.current?.play?.();
+        bgAudioRef.current?.play().catch(() => {});
+        voiceAudioRef.current?.play().catch(() => {});
       } else {
-        bgAudio?.pause();
-        voiceAudioRef.current?.pause?.();
+        bgAudioRef.current?.pause();
+        voiceAudioRef.current?.pause();
       }
       return next;
     });
   };
 
   const skipToNextPhase = () => {
-    if (currentPhase < meditation.length - 1) {
-      voiceAudioRef.current?.pause?.();
+    if (voiceAudioRef.current) {
+      voiceAudioRef.current.pause();
+      if (voiceAudioRef.current.src.startsWith("blob:")) {
+        URL.revokeObjectURL(voiceAudioRef.current.src);
+      }
       voiceAudioRef.current = null;
+    }
 
+    if (currentPhase < meditation.length - 1) {
       setCurrentPhase((p) => {
         const next = p + 1;
         currentPhaseRef.current = next;
@@ -303,6 +307,7 @@ export default function MeditationSessionPage() {
     }
   };
 
+  // UI states
   if (loading) {
     return (
       <div className="min-h-screen bg-purple-950 flex items-center justify-center text-white">
@@ -365,7 +370,6 @@ export default function MeditationSessionPage() {
         className="min-h-screen flex flex-col items-center justify-center text-white relative overflow-hidden transition-colors duration-2000"
         style={{ backgroundColor }}
       >
-        {/* Progress bar */}
         <div className="absolute top-0 left-0 w-full h-1 bg-white/10">
           <div
             className="h-full bg-white/60 transition-all duration-300"
@@ -373,14 +377,11 @@ export default function MeditationSessionPage() {
           />
         </div>
 
-        {/* Phase indicator */}
         <div className="absolute top-8 text-sm opacity-60">
           Phase {currentPhase + 1} of {meditation.length}
         </div>
 
-        {/* Main content */}
         <div className="max-w-2xl px-8 text-center space-y-8 relative">
-          {/* Breathing circle */}
           <div className="absolute left-1/2 top-0 -translate-x-1/2 pointer-events-none">
             <div className="relative w-56 h-56">
               <div
@@ -417,10 +418,10 @@ export default function MeditationSessionPage() {
               textVisible ? "opacity-90" : "opacity-0"
             }`}
           >
-            {textVisible ? displayedText : ""}
+            {/* Toggle displayedText for typewriter, or just phase.text */}
+            {phase?.text}
           </p>
 
-          {/* Phase progress */}
           <div className="pt-8 relative">
             <div className="w-64 h-2 bg-white/10 rounded-full mx-auto overflow-hidden">
               <div
@@ -434,7 +435,6 @@ export default function MeditationSessionPage() {
           </div>
         </div>
 
-        {/* Controls */}
         <div className="fixed bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-white/10 backdrop-blur-xl px-6 py-3 rounded-full border border-white/20 shadow-2xl">
           <button
             onClick={togglePlayPause}
