@@ -1,2 +1,6 @@
 @import "tailwindcss";
-@import "../theme/brandTheme.css";
+
+html,
+body {
+  min-height: 100%;
+}

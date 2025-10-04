@@ -2,158 +2,285 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { supabase } from "@/lib/supabaseClient";
-import PlanetBackground from "@/components/visuals/PlanetBackground";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "sonner";
+import { Heart, Sparkles, Eye, EyeOff } from "lucide-react";
+import { z } from "zod";
+import PlanetBackground from "../../../components/visuals/PlanetBackground";
+
+// Validation schema
+const authSchema = z.object({
+  email: z.string().email("Please enter a valid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  name: z.string().min(2, "Name must be at least 2 characters").optional()
+});
 
 export default function LoginPage() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError("");
+  const handleAuth = async (
+    event: React.FormEvent<HTMLFormElement>,
+    isSignUp: boolean
+  ) => {
+    event.preventDefault();
+    setLoading(true);
 
-    const formData = new FormData(e.currentTarget);
+    const formData = new FormData(event.currentTarget);
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
 
     try {
+      // Validate form data
+      const validationData = isSignUp
+        ? { email, password }
+        : { email, password };
+
+      authSchema.parse(validationData);
+
       if (isSignUp) {
         const { error } = await supabase.auth.signUp({
           email,
-          password
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/`
+          }
         });
+
         if (error) throw error;
-        setError("Check your email for verification link!");
+
+        // Success toast for sign up
+        toast.success("Welcome to your wellness journey!", {
+          description:
+            "Your account has been created. Check your email to verify your account."
+        });
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password
         });
+
         if (error) throw error;
-        console.log("🔥Going to the Main Page");
+
+        // Success toast for sign in
+        toast.success("Welcome back!", {
+          description: "Ready to continue your emotional wellness journey?"
+        });
+
         router.push("/");
       }
-    } catch (error) {
+    } catch (error: unknown) {
+      // Type guard to check if it's an Error instance
       if (error instanceof Error) {
-        setError(error.message);
+        console.error("Auth error:", error);
+      }
+      // Check if it's a Zod validation error
+      if (error instanceof z.ZodError) {
+        toast.error("Please check your input", {
+          description: error.message
+        });
+      } else if (error instanceof Error) {
+        // Supabase or other errors
+        toast.error(isSignUp ? "Signup failed" : "Login failed", {
+          description:
+            error.message || "Something went wrong. Please try again."
+        });
       } else {
-        setError("Something went wrong. Please try again");
+        // Unknown error type
+        toast.error(isSignUp ? "Signup failed" : "Login failed", {
+          description: "Something went wrong. Please try again."
+        });
       }
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center">
-      <div className="absolute inset-0 z-0">
-        <PlanetBackground />
-      </div>
-      <Card className="relative z-10 bg-white w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-3xl">
-            Welcome to <span className="text-primary">Sentient AI🤖</span>
-          </CardTitle>
-          <p className="text-muted-foreground">
-            Your AI companion for emotional wellness
-          </p>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-2 mb-6">
-            <Button
-              type="button"
-              variant={!isSignUp ? "outline" : "default"}
-              className="flex-1"
-              onClick={() => setIsSignUp(false)}
-            >
-              Sign In
-            </Button>
-            <Button
-              type="button"
-              variant={isSignUp ? "outline" : "default"}
-              className="flex-1"
-              onClick={() => setIsSignUp(true)}
-            >
-              Sign Up
-            </Button>
+    <div className="min-h-screen relative overflow-hidden bg-[#0b0b14]">
+      {/* Background Layer */}
+      <PlanetBackground />
+
+      {/* Content Layer */}
+      <div className="relative z-10 flex items-center justify-center min-h-screen p-6">
+        <div className="w-full max-w-md">
+          {/* Header Section */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/20 border border-purple-400/30 text-purple-300 mb-6">
+              <Sparkles className="w-4 h-4" />
+              <span className="text-sm font-medium">Mindful AI Companion</span>
+            </div>
+
+            <h1 className="text-4xl font-bold mb-2 text-white">
+              Welcome to{" "}
+              <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                Sentient AI
+              </span>
+            </h1>
+
+            <p className="text-gray-400">
+              Your personal AI companion for emotional wellness
+            </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2 ">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                required
-                placeholder="your@email.com"
-                // 🎨 Add on focus or hover that colored pink border.
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                required
-                placeholder="Your password"
-                // 🎨 Add on focus or hover that colored pink border.
-              />
-            </div>
-            <div className="flex justify-end">
-              {!isSignUp && (
-                <button
-                  type="button"
-                  className="text-sm text-primary hover:underline"
-                  onClick={async () => {
-                    const email = (
-                      document.getElementById("email") as HTMLInputElement
-                    ).value;
-                    if (!email) {
-                      setError("Enter your email to reset your password.");
-                      return;
-                    }
-                    const { error } = await supabase.auth.resetPasswordForEmail(
-                      email,
-                      {
-                        redirectTo: `${window.location.origin}/auth/update-password`
-                      }
-                    );
-                    if (error) setError(error.message);
-                    else setError("Check your email for password reset link!");
-                  }}
-                >
-                  Forgot password?
-                </button>
-              )}
-            </div>
+          {/* Auth Card */}
+          <Card className="border-white/10 bg-white/5 backdrop-blur-xl shadow-2xl">
+            <CardHeader className="text-center pb-4">
+              <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-purple-500/50">
+                <Heart className="w-8 h-8 text-white" />
+              </div>
+            </CardHeader>
 
-            {error && <p className="text-sm text-destructive">{error}</p>}
+            <CardContent>
+              <Tabs defaultValue="signin" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 mb-6 bg-white/5">
+                  <TabsTrigger
+                    value="signin"
+                    className="data-[state=active]:bg-purple-500/20 data-[state=active]:text-white text-gray-400"
+                  >
+                    Sign In
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="signup"
+                    className="data-[state=active]:bg-purple-500/20 data-[state=active]:text-white text-gray-400"
+                  >
+                    Sign Up
+                  </TabsTrigger>
+                </TabsList>
 
-            <Button
-              variant="outline"
-              type="submit"
-              className="w-full"
-              disabled={isLoading}
-            >
-              {isLoading
-                ? "Loading..."
-                : isSignUp
-                ? "Create Account"
-                : "Sign In"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+                {/* Sign In Form */}
+                <TabsContent value="signin">
+                  <form
+                    onSubmit={(e) => handleAuth(e, false)}
+                    className="space-y-4"
+                  >
+                    <div className="space-y-2">
+                      <Label htmlFor="email" className="text-white">
+                        Email
+                      </Label>
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        placeholder="you@example.com"
+                        required
+                        className="bg-white/5 border-white/10 text-white placeholder:text-gray-500"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="password" className="text-white">
+                        Password
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          id="password"
+                          name="password"
+                          type={showPassword ? "text" : "password"}
+                          placeholder="Enter your password"
+                          required
+                          className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 pr-10"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                          onClick={() => setShowPassword(!showPassword)}
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4 text-gray-400" />
+                          ) : (
+                            <Eye className="h-4 w-4 text-gray-400" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+
+                    <Button
+                      type="submit"
+                      className="w-full mt-6 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                      disabled={loading}
+                    >
+                      {loading ? "Signing in..." : "Sign In"}
+                    </Button>
+                  </form>
+                </TabsContent>
+
+                {/* Sign Up Form */}
+                <TabsContent value="signup">
+                  <form
+                    onSubmit={(e) => handleAuth(e, true)}
+                    className="space-y-4"
+                  >
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-email" className="text-white">
+                        Email
+                      </Label>
+                      <Input
+                        id="signup-email"
+                        name="email"
+                        type="email"
+                        placeholder="you@example.com"
+                        required
+                        className="bg-white/5 border-white/10 text-white placeholder:text-gray-500"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-password" className="text-white">
+                        Password
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          id="signup-password"
+                          name="password"
+                          type={showPassword ? "text" : "password"}
+                          placeholder="Create a secure password"
+                          required
+                          className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 pr-10"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                          onClick={() => setShowPassword(!showPassword)}
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4 text-gray-400" />
+                          ) : (
+                            <Eye className="h-4 w-4 text-gray-400" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+
+                    <Button
+                      type="submit"
+                      className="w-full mt-6 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                      disabled={loading}
+                    >
+                      {loading ? "Creating account..." : "Begin Journey"}
+                    </Button>
+                  </form>
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+
+          <p className="text-center text-sm text-gray-400 mt-6">
+            By continuing, you agree to embark on a journey of self-discovery
+            and emotional wellness.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
