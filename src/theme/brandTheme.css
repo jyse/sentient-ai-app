@@ -1,0 +1,65 @@
+:root {
+  --brand-bg-from: #0b0615;
+  --brand-bg-to: #190d2e;
+  --planet-1: radial-gradient(circle, #673ab7 0%, transparent 70%);
+  --planet-2: radial-gradient(circle, #009688 0%, transparent 70%);
+  --planet-3: radial-gradient(circle, #ff5722 0%, transparent 70%);
+  --planet-4: radial-gradient(circle, #3f51b5 0%, transparent 70%);
+}
+
+.bg-gradient-ambient {
+  background: radial-gradient(
+    circle at 30% 30%,
+    var(--brand-bg-from),
+    var(--brand-bg-to)
+  );
+}
+
+/* Planets */
+.planet {
+  position: absolute;
+  border-radius: 9999px;
+  opacity: 0.25;
+  filter: blur(40px);
+  animation: floatPlanet 18s ease-in-out infinite alternate;
+}
+
+.planet:nth-child(1) {
+  background: var(--planet-1);
+}
+.planet:nth-child(2) {
+  background: var(--planet-2);
+}
+.planet:nth-child(3) {
+  background: var(--planet-3);
+}
+.planet:nth-child(4) {
+  background: var(--planet-4);
+}
+
+/* Ripples */
+.ripple {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  animation: ripple 5s linear infinite;
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(3);
+    opacity: 0;
+  }
+}
+
+@keyframes floatPlanet {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    transform: translateY(-20px) scale(1.05);
+  }
+}

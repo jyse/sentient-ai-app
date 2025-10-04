@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/lib/supabaseClient";
+import PlanetBackground from "@/components/visuals/PlanetBackground";
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -40,16 +41,23 @@ export default function LoginPage() {
         console.log("🔥Going to the Main Page");
         router.push("/");
       }
-    } catch (error: any) {
-      setError(error.message);
+    } catch (error) {
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError("Something went wrong. Please try again");
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <Card className="w-full max-w-md">
+    <div className="relative min-h-screen flex items-center justify-center">
+      <div className="absolute inset-0 z-0">
+        <PlanetBackground />
+      </div>
+      <Card className="relative z-10 bg-white w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-3xl">
             Welcome to <span className="text-primary">Sentient AI🤖</span>
@@ -62,7 +70,7 @@ export default function LoginPage() {
           <div className="flex gap-2 mb-6">
             <Button
               type="button"
-              variant={!isSignUp ? "default" : "outline"}
+              variant={!isSignUp ? "outline" : "default"}
               className="flex-1"
               onClick={() => setIsSignUp(false)}
             >
@@ -70,7 +78,7 @@ export default function LoginPage() {
             </Button>
             <Button
               type="button"
-              variant={isSignUp ? "default" : "outline"}
+              variant={isSignUp ? "outline" : "default"}
               className="flex-1"
               onClick={() => setIsSignUp(true)}
             >
@@ -79,7 +87,7 @@ export default function LoginPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
+            <div className="space-y-2 ">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
@@ -87,6 +95,7 @@ export default function LoginPage() {
                 type="email"
                 required
                 placeholder="your@email.com"
+                // 🎨 Add on focus or hover that colored pink border.
               />
             </div>
             <div className="space-y-2">
@@ -97,6 +106,7 @@ export default function LoginPage() {
                 type="password"
                 required
                 placeholder="Your password"
+                // 🎨 Add on focus or hover that colored pink border.
               />
             </div>
             <div className="flex justify-end">
@@ -129,7 +139,12 @@ export default function LoginPage() {
 
             {error && <p className="text-sm text-destructive">{error}</p>}
 
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button
+              variant="outline"
+              type="submit"
+              className="w-full"
+              disabled={isLoading}
+            >
               {isLoading
                 ? "Loading..."
                 : isSignUp
