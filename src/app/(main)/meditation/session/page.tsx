@@ -258,7 +258,7 @@ export default function MeditationSessionPage() {
 
       setTimeInPhase((prev) => {
         const active = meditation[currentPhaseRef.current];
-        const duration = active?.theme?.duration ?? 90;
+        const duration = active?.theme?.duration ?? 30;
         const next = prev + 1;
 
         if (next >= duration) {

@@ -148,7 +148,7 @@ ${inspirations}
     const phases = (meditation as MeditationPhase[]).map((p, i) => ({
       phase: typeof p.phase === "string" ? p.phase : `Phase ${i + 1}`,
       text: typeof p.text === "string" ? p.text : "",
-      theme: p.theme
+      theme: { duration: 30 }
     }));
 
     return NextResponse.json(phases);
