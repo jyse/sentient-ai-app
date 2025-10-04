@@ -67,11 +67,11 @@ export default function MainPage() {
   return (
     <div className="min-h-screen bg-purple-950 text-white relative overflow-hidden">
       {/* Floating orbs - positioned absolutely for background effect */}
-      <div className="absolute top-20 left-20 w-48 h-48 bg-purple-600 rounded-full blur-3xl opacity-60" />
-      <div className="absolute top-10 right-32 w-32 h-32 bg-purple-500 rounded-full blur-3xl opacity-40" />
-      <div className="absolute bottom-32 left-1/3 w-64 h-64 bg-teal-600 rounded-full blur-3xl opacity-50" />
-      <div className="absolute bottom-20 right-20 w-56 h-56 bg-orange-600 rounded-full blur-3xl opacity-50" />
-      <div className="absolute top-1/2 left-10 w-40 h-40 bg-green-600 rounded-full blur-3xl opacity-40" />
+      <div className="absolute top-20 left-20 w-48 h-48 bg-purple-600 rounded-full  opacity-60" />
+      <div className="absolute top-10 right-32 w-32 h-32 bg-purple-500 rounded-full  opacity-40" />
+      <div className="absolute bottom-32 left-1/3 w-64 h-64 bg-teal-600 rounded-full  opacity-50" />
+      <div className="absolute bottom-20 right-20 w-56 h-56 bg-orange-600 rounded-full  opacity-50" />
+      <div className="absolute top-1/2 left-10 w-40 h-40 bg-green-600 rounded-full  opacity-40" />
 
       {/* Decorative circles - outline only */}
       <div className="absolute top-1/3 left-1/2 transform -translate-x-1/2 w-96 h-96 border border-white/10 rounded-full" />

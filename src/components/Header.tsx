@@ -1,18 +1,54 @@
-// src/components/Header.tsx
 "use client";
-
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { supabase } from "@/lib/supabaseClient";
+import { Sparkles } from "lucide-react";
 
 export default function Header() {
-  const router = useRouter();
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    const getUser = async () => {
+      const {
+        data: { user }
+      } = await supabase.auth.getUser();
+      if (user?.email) setUserEmail(user.email);
+    };
+    getUser();
+  }, []);
 
   return (
-    <header className="bg-white border-b p-4 shadow-sm flex justify-between items-center">
-      <div className="font-bold text-lg">🧘‍♀️ Sentient AI</div>
-      <nav className="space-x-4">
-        <button onClick={() => router.push("/meditation")}>Meditate</button>
-        <button onClick={() => router.push("/profile")}>Profile</button>
-      </nav>
-    </header>
+    <>
+      <header className="flex items-center justify-between px-6 py-4 bg-purple-950 text-white shadow-md">
+        <Link href="/" className="font-bold text-lg">
+          SentientAI
+        </Link>
+
+        <nav className="flex items-center gap-6">
+          <Link href="/privacy" className="text-sm hover:text-purple-300">
+            Privacy
+          </Link>
+          <Link href="/terms" className="text-sm hover:text-purple-300">
+            Terms
+          </Link>
+
+          {userEmail ? (
+            <Link
+              href="/profile"
+              className="bg-purple-600 hover:bg-purple-700 px-3 py-1 rounded-lg text-sm"
+            >
+              {userEmail.split("@")[0]}
+            </Link>
+          ) : (
+            <Link
+              href="/login"
+              className="bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-lg text-sm"
+            >
+              Login
+            </Link>
+          )}
+        </nav>
+      </header>
+    </>
   );
 }
