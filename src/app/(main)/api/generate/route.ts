@@ -95,7 +95,7 @@ Write a guided meditation in exactly 6 phases:
 6. Maintenance – suggest a simple way to carry it into daily life.
 
 Requirements:
-- 2–4 sentences per phase.
+- Each phase should last 30 seconds when read aloud. 
 - Tone: warm, compassionate, clear. No medical/therapeutic claims.
 - Use the "inspiration lines" as raw material; adapt rather than copy.
 - Personalize lightly using the user's note if present.

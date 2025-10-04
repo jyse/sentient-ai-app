@@ -73,6 +73,7 @@ export default function MeditationReadyPage() {
         });
 
         const meditationJson: MeditationPhase[] = await response.json();
+        console.log(meditationJson, "API RESPONSE");
         setMeditation(meditationJson);
         localStorage.setItem(
           "currentMeditation",

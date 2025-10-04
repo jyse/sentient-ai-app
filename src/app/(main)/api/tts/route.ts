@@ -10,7 +10,7 @@ export async function POST(req: Request) {
 
   const response = await openai.audio.speech.create({
     model: "gpt-4o-mini-tts",
-    voice: "alloy", // try: "verse", "sage", etc.
+    voice: "sage", // try: "verse", "sage", etc.
     input: text
   });
 

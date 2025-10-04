@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Pause, Play, SkipForward } from "lucide-react";
 
-// ✅ FIXED TYPE
+// 🎨 Emotion → background color
 const EMOTION_COLORS: Record<
   string,
   { hue: number; sat: number; light: number }
@@ -21,6 +21,27 @@ const EMOTION_COLORS: Record<
   peaceful: { hue: 240, sat: 40, light: 50 },
   grateful: { hue: 270, sat: 55, light: 58 },
   happy: { hue: 50, sat: 80, light: 65 }
+};
+
+// 🎶 Emotion → music file
+const MUSIC_MAP: Record<string, string> = {
+  accepting: "accepting.mp3",
+  calm: "calm.mp3",
+  peaceful: "peaceful.mp3",
+  grateful: "grateful.mp3",
+  content: "content.mp3",
+  grounded: "grounded.mp3",
+  connected: "connected.mp3",
+  patient: "patient.mp3",
+  hopeful: "hopeful.mp3",
+  joyful: "joyful.mp3",
+  energized: "energized.mp3",
+  rested: "rested.mp3",
+  understanding: "understanding.mp3",
+  focused: "focused.mp3",
+  // fallback aliases
+  relaxed: "calm.mp3",
+  clear: "focused.mp3"
 };
 
 type MoodEntry = {
@@ -38,6 +59,7 @@ type MeditationPhase = {
   };
 };
 
+// 🎨 Background gradient interpolation
 function interpolateColor(
   from: { hue: number; sat: number; light: number },
   to: { hue: number; sat: number; light: number },
@@ -49,36 +71,14 @@ function interpolateColor(
     light: from.light + (to.light - from.light) * progress
   };
 }
-
 function toHSL(color: { hue: number; sat: number; light: number }) {
   return `hsl(${color.hue}, ${color.sat}%, ${color.light}%)`;
-}
-
-// 🔤 Optional typewriter hook
-function useTypewriter(text: string, duration = 10000) {
-  const [displayed, setDisplayed] = useState<string>("");
-
-  useEffect(() => {
-    setDisplayed("");
-    if (!text) return;
-    let i = 0;
-    const speed = Math.max(duration / text.length, 20); // safeguard
-    const interval = setInterval(() => {
-      setDisplayed((prev) => prev + text.charAt(i));
-      i++;
-      if (i >= text.length) clearInterval(interval);
-    }, speed);
-    return () => clearInterval(interval);
-  }, [text, duration]);
-
-  return displayed;
 }
 
 export default function MeditationSessionPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const entryId = searchParams.get("entry_id");
-
   const [entry, setEntry] = useState<MoodEntry | null>(null);
   const [meditation, setMeditation] = useState<MeditationPhase[]>([]);
   const [currentPhase, setCurrentPhase] = useState(0);
@@ -88,10 +88,13 @@ export default function MeditationSessionPage() {
   const [textVisible, setTextVisible] = useState(false);
   const [sessionComplete, setSessionComplete] = useState(false);
   const [loading, setLoading] = useState(true);
-
   const bgAudioRef = useRef<HTMLAudioElement | null>(null);
   const voiceAudioRef = useRef<HTMLAudioElement | null>(null);
-  const ttsCacheRef = useRef<Record<number, string>>({});
+
+  // 🎤 Cache both TTS URLs & durations
+  const ttsCacheRef = useRef<Record<number, { url: string; duration: number }>>(
+    {}
+  );
   const currentPhaseRef = useRef(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -100,10 +103,6 @@ export default function MeditationSessionPage() {
   }, [currentPhase]);
 
   const phase = meditation[currentPhase];
-  // Toggle this line 👇 if you want typewriter instead of plain text
-  const narrationDuration =
-    (ttsCacheRef.current as any)[`${currentPhase}-duration`] || 10000;
-  const displayedText = useTypewriter(phase?.text ?? "", narrationDuration);
 
   // Fade text on phase change
   useEffect(() => {
@@ -112,7 +111,7 @@ export default function MeditationSessionPage() {
     return () => clearTimeout(t);
   }, [currentPhase]);
 
-  // Fetch entry and meditation, pre-generate TTS
+  // Fetch entry + meditation + preload TTS
   useEffect(() => {
     const fetchData = async () => {
       if (!entryId) {
@@ -135,8 +134,7 @@ export default function MeditationSessionPage() {
             const parsed: MeditationPhase[] = JSON.parse(stored);
             setMeditation(parsed);
 
-            // Pre-generate TTS
-            const cache: Record<number, string> = {};
+            const cache: Record<number, { url: string; duration: number }> = {};
             await Promise.all(
               parsed.map(async (phase, i) => {
                 if (ttsCacheRef.current[i]) return;
@@ -148,7 +146,16 @@ export default function MeditationSessionPage() {
                   });
                   if (!res.ok) throw new Error("TTS failed");
                   const blob = await res.blob();
-                  cache[i] = URL.createObjectURL(blob);
+                  const url = URL.createObjectURL(blob);
+
+                  // measure duration
+                  const audio = new Audio(url);
+                  await new Promise<void>((resolve) => {
+                    audio.onloadedmetadata = () => {
+                      cache[i] = { url, duration: audio.duration * 1000 };
+                      resolve();
+                    };
+                  });
                 } catch (err) {
                   console.error("TTS preload failed", i, err);
                 }
@@ -160,11 +167,14 @@ export default function MeditationSessionPage() {
           }
         }
 
-        // Background music setup
-        const music = new Audio(`/music/${data.target_emotion}.mp3`);
-        music.loop = true;
-        music.volume = 0.35;
-        bgAudioRef.current = music;
+        // Background music
+        const file = MUSIC_MAP[data.target_emotion];
+        if (file) {
+          const music = new Audio(`/music/${file}`);
+          music.loop = true;
+          music.volume = 0.2;
+          bgAudioRef.current = music;
+        }
       }
       setLoading(false);
     };
@@ -172,7 +182,7 @@ export default function MeditationSessionPage() {
     fetchData();
   }, [entryId, router]);
 
-  // Cleanup on unmount
+  // Cleanup
   useEffect(() => {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
@@ -183,17 +193,16 @@ export default function MeditationSessionPage() {
           URL.revokeObjectURL(voiceAudioRef.current.src);
         }
       }
-      Object.values(ttsCacheRef.current).forEach((url) => {
+      Object.values(ttsCacheRef.current).forEach(({ url }) => {
         if (url.startsWith("blob:")) URL.revokeObjectURL(url);
       });
     };
   }, []);
 
-  // Play voice narration on phase change
+  // Play narration on phase change
   useEffect(() => {
     if (!isPlaying) return;
 
-    // Stop old audio
     if (voiceAudioRef.current) {
       voiceAudioRef.current.pause();
       if (voiceAudioRef.current.src.startsWith("blob:")) {
@@ -202,10 +211,10 @@ export default function MeditationSessionPage() {
       voiceAudioRef.current = null;
     }
 
-    // Play new phase audio
-    const url = ttsCacheRef.current[currentPhase];
-    if (url) {
-      const audio = new Audio(url);
+    const data = ttsCacheRef.current[currentPhase];
+    if (data) {
+      const audio = new Audio(data.url);
+      audio.volume = 0.9;
       voiceAudioRef.current = audio;
       audio.play().catch((err) => console.warn("Audio play failed:", err));
     }
@@ -309,7 +318,7 @@ export default function MeditationSessionPage() {
     }
   };
 
-  // UI states
+  // ---------- UI ----------
   if (loading) {
     return (
       <div className="min-h-screen bg-purple-950 flex items-center justify-center text-white">
@@ -347,7 +356,7 @@ export default function MeditationSessionPage() {
     phaseProgress
   );
   const backgroundColor = toHSL(interpolated);
-  const phaseDuration = phase?.theme?.duration || 90;
+  const phaseDuration = phase?.theme?.duration || 30;
   const phaseProgressPercent = (timeInPhase / phaseDuration) * 100;
   const totalProgress =
     ((currentPhase + timeInPhase / phaseDuration) / meditation.length) * 100;
@@ -384,29 +393,6 @@ export default function MeditationSessionPage() {
         </div>
 
         <div className="max-w-2xl px-8 text-center space-y-8 relative">
-          <div className="absolute left-1/2 top-0 -translate-x-1/2 pointer-events-none">
-            <div className="relative w-56 h-56">
-              <div
-                className="absolute inset-0 rounded-full border-2 border-white/40"
-                style={{ animation: "breathe 6s ease-in-out infinite" }}
-              />
-              <div
-                className="absolute inset-8 rounded-full border-2 border-white/30"
-                style={{ animation: "breathe 6s ease-in-out infinite 0.7s" }}
-              />
-              <div
-                className="absolute inset-16 rounded-full border-2 border-white/20"
-                style={{ animation: "breathe 6s ease-in-out infinite 1.4s" }}
-              />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div
-                  className="w-10 h-10 rounded-full bg-white/50 backdrop-blur-sm"
-                  style={{ boxShadow: "0 0 30px rgba(255, 255, 255, 0.6)" }}
-                />
-              </div>
-            </div>
-          </div>
-
           <h2
             className={`text-3xl font-semibold transition-opacity duration-1000 relative mt-64 ${
               textVisible ? "opacity-100" : "opacity-0"
@@ -420,8 +406,7 @@ export default function MeditationSessionPage() {
               textVisible ? "opacity-90" : "opacity-0"
             }`}
           >
-            {/* Toggle displayedText for typewriter, or just phase.text */}
-            {displayedText}
+            {phase?.text}
           </p>
 
           <div className="pt-8 relative">
