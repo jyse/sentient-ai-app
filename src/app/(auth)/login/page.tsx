@@ -16,7 +16,6 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    console.log("isSignUp:", isSignUp); // Add this line
     setIsLoading(true);
     setError("");
 
@@ -49,8 +48,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-purple-400">
-      <Card className="w-full max-w-md bg-teal-400">
+    <div className="min-h-screen flex items-center justify-center">
+      <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-3xl">
             Welcome to <span className="text-primary">Sentient AI🤖</span>
