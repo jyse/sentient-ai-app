@@ -1,9 +1,12 @@
 "use client";
 
+import PlanetBackground from "@/components/visuals/PlanetBackground";
+
 export default function TermsPage() {
   return (
-    <div className="min-h-screen bg-purple-950 text-white p-8">
-      <div className="max-w-3xl mx-auto space-y-6">
+    <div className="min-h-screen bg-brand text-white p-8">
+      <PlanetBackground />
+      <div className="max-w-3xl mx-auto space-y-6 p-10 bg-white/4 rounded-xl mt-6">
         <h1 className="text-3xl font-bold mb-4">📜 Terms of Service</h1>
         <p>
           By using this app, you agree to the following terms. This app is an

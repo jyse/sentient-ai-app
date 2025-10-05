@@ -139,13 +139,15 @@ export default function CheckInPage() {
     }, 800);
   };
 
+  //
+
   return (
     <div className="min-h-screen bg-brand text-white relative overflow-hidden">
       <PlanetBackground />
       {/* Wrapper */}
       <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-6">
         <div
-          className="w-full max-w-lg bg-white/[0.05] border border-white/[0.08] 
+          className="w-full  max-w-lg bg-white/[0.05] border border-white/[0.08] 
                   backdrop-blur-xl rounded-3xl p-8 shadow-[0_0_40px_rgba(0,0,0,0.4)] mb-10"
         >
           {/* Title */}
@@ -206,14 +208,15 @@ export default function CheckInPage() {
             </p>
           </div>
         </div>
-
-        <NavigationButtons
-          onBack={() => router.back()}
-          onNext={handleSubmit}
-          nextLabel="Begin Journey"
-          backLabel="Back"
-          disabled={!selectedMood || loading}
-        />
+        <div className="flex justify-between min-w-[520px]">
+          <NavigationButtons
+            onBack={() => router.back()}
+            onNext={handleSubmit}
+            nextLabel="Begin Journey"
+            backLabel="Back"
+            disabled={!selectedMood || loading}
+          />
+        </div>
       </div>
     </div>
   );

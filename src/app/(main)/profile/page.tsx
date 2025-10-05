@@ -43,13 +43,11 @@ export default function ProfilePage() {
         return;
       }
 
-      // Set basic profile info
       setProfile({
         email: user.email || "",
         username: user.email?.split("@")[0] || "user"
       });
 
-      // Fetch meditation stats
       const { data: sessions } = await supabase
         .from("meditation_sessions")
         .select("duration_seconds, completed")
@@ -67,7 +65,6 @@ export default function ProfilePage() {
         });
       }
 
-      // Fetch recent check-ins (last 5)
       const { data: checkIns } = await supabase
         .from("mood_entries")
         .select("created_at, current_emotion, target_emotion")
@@ -108,7 +105,7 @@ export default function ProfilePage() {
       <PlanetBackground />
 
       <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-6">
-        <div className="w-full max-w-4xl space-y-6">
+        <div className="w-full max-w-4xl space-y-6 mb-10">
           {/* Profile Header */}
           <div className="w-full bg-white/[0.05] border border-white/[0.08] backdrop-blur-xl rounded-3xl p-8 shadow-[0_0_40px_rgba(0,0,0,0.4)]">
             <div className="text-center">
@@ -119,6 +116,8 @@ export default function ProfilePage() {
               <p className="text-gray-400">{profile?.email}</p>
             </div>
           </div>
+
+          {/* Stats & Preferences Grid */}
           <div className="grid md:grid-cols-2 gap-6">
             {/* Meditation Stats */}
             <div className="bg-white/[0.05] border border-white/[0.08] backdrop-blur-xl rounded-3xl p-8 shadow-[0_0_40px_rgba(0,0,0,0.4)]">
@@ -194,6 +193,7 @@ export default function ProfilePage() {
               </div>
             </div>
           </div>
+
           {/* Recent Check-ins */}
           <div className="bg-white/[0.05] border border-white/[0.08] backdrop-blur-xl rounded-3xl p-8 shadow-[0_0_40px_rgba(0,0,0,0.4)]">
             <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
@@ -224,6 +224,7 @@ export default function ProfilePage() {
               )}
             </div>
           </div>
+
           {/* Data & Privacy Section */}
           <div className="bg-white/[0.05] border border-white/[0.08] backdrop-blur-xl rounded-3xl p-8 shadow-[0_0_40px_rgba(0,0,0,0.4)]">
             <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
@@ -245,16 +246,22 @@ export default function ProfilePage() {
               </p>
             </div>
           </div>
+
+          {/* Navigation Buttons - OUTSIDE all the cards */}
+
+          {/* Match the content container */}
+          <div className="flex items-center justify-between">
+            <NavigationButtons
+              onBack={async () => {
+                await supabase.auth.signOut();
+                router.push("/");
+              }}
+              onNext={() => router.push("/check-in")}
+              nextLabel="New Meditation"
+              backLabel="Go back to Home"
+            />
+          </div>
         </div>
-        <NavigationButtons
-          onBack={async () => {
-            await supabase.auth.signOut();
-            router.push("/");
-          }}
-          onNext={() => router.push("/check-in")}
-          nextLabel="New Meditation"
-          backLabel="Sign Out"
-        />
       </div>
     </div>
   );

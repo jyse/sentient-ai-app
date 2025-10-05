@@ -18,7 +18,7 @@ export default function NavigationButtons({
   disabled = false
 }: NavigationButtonsProps) {
   return (
-    <div className="flex items-center justify-between w-full max-w-[520px]">
+    <div className="flex items-center justify-between w-full ">
       <button
         onClick={onBack}
         className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"

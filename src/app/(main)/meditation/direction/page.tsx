@@ -156,17 +156,19 @@ export default function MeditationDirectionPage() {
               </button>
             );
           })}
+          {feedback && (
+            <p className="text-sm text-purple-300 mb-4">{feedback}</p>
+          )}
+          <div className="min-w-[490px] mt-6">
+            <NavigationButtons
+              onBack={() => router.push(`/check-in?entry_id=${entryId}`)}
+              onNext={handleSubmit}
+              nextLabel="Guide Me"
+              backLabel="Back"
+              disabled={!selectedTarget || loading}
+            />
+          </div>
         </div>
-
-        {feedback && <p className="text-sm text-purple-300 mb-4">{feedback}</p>}
-
-        <NavigationButtons
-          onBack={() => router.push(`/check-in?entry_id=${entryId}`)}
-          onNext={handleSubmit}
-          nextLabel="Guide Me"
-          backLabel="Back"
-          disabled={!selectedTarget || loading}
-        />
       </div>
     </div>
   );

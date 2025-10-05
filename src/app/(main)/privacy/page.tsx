@@ -1,9 +1,12 @@
 "use client";
+import PlanetBackground from "@/components/visuals/PlanetBackground";
 
 export default function PrivacyPage() {
   return (
     <div className="min-h-screen bg-brand text-white p-8">
-      <div className="max-w-3xl mx-auto space-y-6">
+      <PlanetBackground />
+
+      <div className="max-w-3xl mx-auto space-y-6 p-10 bg-white/4 rounded-xl mt-6">
         <h1 className="text-3xl font-bold mb-4">🔒 Privacy Policy</h1>
         <p>
           We care about your privacy. This app only stores the data needed to
