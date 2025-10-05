@@ -73,7 +73,7 @@ export default function LoginPage() {
           description: "Ready to continue your emotional wellness journey?"
         });
 
-        router.push("/");
+        window.location.href = "/";
       }
     } catch (error: unknown) {
       // Type guard to check if it's an Error instance
