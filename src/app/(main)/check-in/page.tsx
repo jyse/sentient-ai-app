@@ -11,15 +11,12 @@ export default function CheckInPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const entryId = searchParams.get("entry_id");
-
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState("");
 
   const handleSubmit = async () => {
-    console.log(`💫 You have selected: ${selectedMood} as your current mood`);
-
     if (!selectedMood) return;
     setLoading(true);
 
@@ -47,8 +44,6 @@ export default function CheckInPage() {
         .eq("id", entryId)
         .select()
         .single();
-
-      console.log("👍 Updated existing mood entry", result);
     } else {
       // Create new entry
       result = await supabase
