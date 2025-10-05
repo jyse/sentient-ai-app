@@ -106,10 +106,14 @@
 
 .card-zen {
   backdrop-filter: blur(12px);
-  background: rgba(15, 11, 30, 0.6);
+  background: #0f0b1e99;
   border: 1px solid #ffffff1a;
   border-radius: 1rem;
   box-shadow: 0 4px 30px rgba(103, 58, 183, 0.1);
+}
+
+.bg-card {
+  background-color: #8e18e2be;
 }
 
 @keyframes float {
