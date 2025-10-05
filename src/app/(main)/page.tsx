@@ -7,16 +7,12 @@ import { User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import PlanetBackground from "@/components/visuals/PlanetBackground";
 
-const PHASES = [
-  { id: "awareness", label: "Awareness", subtitle: "Tune In" },
-  { id: "acceptance", label: "Acceptance", subtitle: "Embrace" },
-  { id: "processing", label: "Processing", subtitle: "Explore" },
-  { id: "reframing", label: "Reframing", subtitle: "Transform" },
-  { id: "integration", label: "Integration", subtitle: "Unify" },
-  { id: "maintenance", label: "Maintenance", subtitle: "Sustain" }
+const FALLBACK_NAMES = [
+  "Celestial Being, Explorer",
+  "Seeker",
+  "Traveler",
+  "Beautiful Soul, Cowboy of Life"
 ];
-
-const FALLBACK_NAMES = ["Explorer", "Seeker", "Traveler", "Beautiful soul"];
 
 export default function MainPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -80,25 +76,61 @@ export default function MainPage() {
           Welcome back, <span className="text-purple-300">{userName}</span>
         </h1>
 
-        <p className="text-gray-300 text-center max-w-xl mb-12">
+        <p className="text-gray-300 text-center max-w-xl mb-6">
           Ready to explore your inner landscape? Let Sentient guide you through
           a personalized meditation crafted just for your emotional state.
         </p>
 
-        {/* Phase buttons */}
-        <div className="flex gap-4 mb-12 flex-wrap justify-center max-w-3xl">
-          {PHASES.map((phase) => (
-            <button
-              key={phase.id}
-              className="flex flex-col items-center justify-center w-24 h-24 rounded-full bg-purple-800/30 border border-purple-400/40 hover:bg-purple-700/40 hover:scale-110 transition-all duration-300"
+        {/* Emotional Journey Preview */}
+        <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 max-w-5xl mx-auto mb-6">
+          {[
+            {
+              name: "Awareness",
+              color: "bg-gradient-awareness",
+              description: "Tune in"
+            },
+            {
+              name: "Acceptance",
+              color: "bg-gradient-acceptance",
+              description: "Embrace"
+            },
+            {
+              name: "Processing",
+              color: "bg-gradient-processing",
+              description: "Explore"
+            },
+            {
+              name: "Reframing",
+              color: "bg-gradient-reframing",
+              description: "Transform"
+            },
+            {
+              name: "Integration",
+              color: "bg-gradient-integration",
+              description: "Unify"
+            },
+            {
+              name: "Maintenance",
+              color: "bg-gradient-maintenance",
+              description: "Sustain"
+            }
+          ].map((phase, index) => (
+            <div
+              key={phase.name}
+              className="card-zen p-4 text-center transform hover:scale-105 transition-zen"
+              style={{ animationDelay: `${index * 100}ms` }}
             >
-              <span className="text-xs font-medium">{phase.label}</span>
-              <span className="text-xs text-gray-400">{phase.subtitle}</span>
-            </button>
+              <div
+                className={`w-12 h-12 ${phase.color} rounded-full mx-auto mb-3 shadow-soft`}
+              ></div>
+              <h3 className="font-semibold text-sm">{phase.name}</h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                {phase.description}
+              </p>
+            </div>
           ))}
         </div>
 
-        {/* Main CTA */}
         <Button
           onClick={() => router.push("/check-in")}
           size="lg"

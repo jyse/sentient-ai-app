@@ -34,7 +34,32 @@
 
 /* Later you could also add this to a themes.ts */
 .bg-brand {
-  background: #0b0b14;
+  background: #1a0d28;
+}
+
+/* Gradient utility classes */
+.bg-gradient-awareness {
+  background: linear-gradient(135deg, hsl(262, 83%, 20%), hsl(262, 83%, 58%));
+}
+
+.bg-gradient-acceptance {
+  background: linear-gradient(135deg, hsl(194, 75%, 25%), hsl(194, 75%, 45%));
+}
+
+.bg-gradient-processing {
+  background: linear-gradient(135deg, hsl(142, 71%, 25%), hsl(142, 71%, 40%));
+}
+
+.bg-gradient-reframing {
+  background: linear-gradient(135deg, hsl(45, 93%, 35%), hsl(45, 93%, 55%));
+}
+
+.bg-gradient-integration {
+  background: linear-gradient(135deg, hsl(25, 85%, 35%), hsl(25, 85%, 55%));
+}
+
+.bg-gradient-maintenance {
+  background: linear-gradient(135deg, hsl(315, 60%, 30%), hsl(315, 60%, 50%));
 }
 
 .floating-orb {
@@ -64,7 +89,7 @@
 .ripple {
   position: absolute;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  border: 2px solid #ffffff33;
   opacity: 0;
   animation: ripple 4s ease-out infinite;
 }
@@ -73,10 +98,18 @@
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid #ffffff1a;
   border-radius: 9999px;
   width: 24rem;
   height: 24rem;
+}
+
+.card-zen {
+  backdrop-filter: blur(12px);
+  background: rgba(15, 11, 30, 0.6);
+  border: 1px solid #ffffff1a;
+  border-radius: 1rem;
+  box-shadow: 0 4px 30px rgba(103, 58, 183, 0.1);
 }
 
 @keyframes float {
