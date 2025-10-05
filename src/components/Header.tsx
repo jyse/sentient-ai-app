@@ -2,7 +2,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
-import { Sparkles } from "lucide-react";
 
 export default function Header() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
