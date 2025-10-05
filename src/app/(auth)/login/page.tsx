@@ -1,5 +1,4 @@
 "use client";
-
 import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
@@ -9,13 +8,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Heart, Sparkles, Eye, EyeOff } from "lucide-react";
-import { z } from "zod";
 import PlanetBackground from "../../../components/visuals/PlanetBackground";
-
-const authSchema = z.object({
-  email: z.string().email("Please enter a valid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters")
-});
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
@@ -33,8 +26,6 @@ export default function LoginPage() {
     const password = formData.get("password") as string;
 
     try {
-      authSchema.parse({ email, password });
-
       if (isSignUp) {
         const { error } = await supabase.auth.signUp({
           email,
@@ -46,7 +37,7 @@ export default function LoginPage() {
 
         if (error) throw error;
 
-        console.log("👍 Sign up is succesful!");
+        console.log("✅ Account has been created! Check your email 📩");
         toast.success("Welcome to your wellness journey!", {
           description:
             "Your account has been created. Check your email to verify your account."
@@ -67,24 +58,10 @@ export default function LoginPage() {
         window.location.href = "/";
       }
     } catch (error: unknown) {
-      console.error("Auth error:", error);
-
-      // Check if it's a Zod validation error
-      if (error instanceof z.ZodError) {
-        const zodError = error as z.ZodError;
-        toast.error("Please check your input", {
-          description: zodError.issues[0].message
-        });
-      } else if (error instanceof Error) {
-        console.log("👹 Oh oh something went wrong at signup/login");
+      if (error instanceof Error) {
         toast.error(isSignUp ? "Signup failed" : "Login failed", {
           description:
             error.message || "Something went wrong. Please try again."
-        });
-      } else {
-        console.log("👹 Oh oh something went wrong. Signup/login failed");
-        toast.error(isSignUp ? "Signup failed" : "Login failed", {
-          description: "Something went wrong. Please try again."
         });
       }
     } finally {
@@ -166,6 +143,7 @@ export default function LoginPage() {
                           type={showPassword ? "text" : "password"}
                           placeholder="Enter your password"
                           required
+                          minLength={6}
                           className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 pr-10"
                         />
                         <Button
@@ -225,6 +203,7 @@ export default function LoginPage() {
                           type={showPassword ? "text" : "password"}
                           placeholder="Create a secure password"
                           required
+                          minLength={6}
                           className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 pr-10"
                         />
                         <Button
