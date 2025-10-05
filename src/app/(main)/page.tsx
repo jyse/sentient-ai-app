@@ -6,15 +6,8 @@ import { User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import PlanetBackground from "@/components/visuals/PlanetBackground";
-
-const FALLBACK_NAMES = [
-  "Celestial Being",
-  "Life Explorer",
-  "Seeker",
-  "Traveler",
-  "Beautiful Soul",
-  "Conscious Mind"
-];
+import { GUIDED_MEDITATION_PHASES } from "@/lib/constants";
+import { NICK_NAMES } from "@/lib/constants";
 
 export default function MainPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -32,7 +25,7 @@ export default function MainPage() {
       if (user) {
         const name =
           user.user_metadata?.name ||
-          FALLBACK_NAMES[Math.floor(Math.random() * FALLBACK_NAMES.length)];
+          NICK_NAMES[Math.floor(Math.random() * NICK_NAMES.length)];
         setUserName(name);
         console.log(`✨Hi ${name}, wonderful to have you here!`);
       }
@@ -85,38 +78,7 @@ export default function MainPage() {
           a personalized meditation crafted just for your emotional state.
         </p>
         <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 max-w-5xl mx-auto mb-6">
-          {[
-            {
-              name: "Awareness",
-              color: "bg-gradient-awareness",
-              description: "Tune in"
-            },
-            {
-              name: "Acceptance",
-              color: "bg-gradient-acceptance",
-              description: "Embrace"
-            },
-            {
-              name: "Processing",
-              color: "bg-gradient-processing",
-              description: "Explore"
-            },
-            {
-              name: "Reframing",
-              color: "bg-gradient-reframing",
-              description: "Transform"
-            },
-            {
-              name: "Integration",
-              color: "bg-gradient-integration",
-              description: "Unify"
-            },
-            {
-              name: "Maintenance",
-              color: "bg-gradient-maintenance",
-              description: "Sustain"
-            }
-          ].map((phase, index) => (
+          {GUIDED_MEDITATION_PHASES.map((phase, index) => (
             <div
               key={phase.name}
               className="card-zen p-4 text-center transform hover:scale-105 transition-zen"
