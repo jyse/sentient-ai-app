@@ -8,6 +8,7 @@ import {
   getTargetEmotions,
   getEmotionDisplay
 } from "@/lib/emotionProgressions";
+import PlanetBackground from "@/components/visuals/PlanetBackground";
 
 export default function MeditationDirectionPage() {
   const router = useRouter();
@@ -95,20 +96,9 @@ export default function MeditationDirectionPage() {
   }
 
   return (
-    <div className="min-h-screen bg-purple-950 text-white relative overflow-hidden">
-      {/* Floating Orbs */}
-      <div className="absolute top-20 left-20 w-48 h-48 bg-purple-600 rounded-full blur-3xl opacity-60" />
-      <div className="absolute top-10 right-32 w-32 h-32 bg-purple-500 rounded-full blur-3xl opacity-40" />
-      <div className="absolute bottom-32 left-1/3 w-64 h-64 bg-teal-600 rounded-full blur-3xl opacity-50" />
-
+    <div className="min-h-screen bg-brand text-white relative overflow-hidden">
+      <PlanetBackground />
       <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-8">
-        {/* Progress Dots */}
-        <div className="flex gap-2 mb-8">
-          <div className="w-2 h-2 bg-purple-800 rounded-full" />
-          <div className="w-2 h-2 bg-purple-500 rounded-full" />
-          <div className="w-2 h-2 bg-purple-800 rounded-full" />
-        </div>
-
         {/* Header */}
         <h2 className="text-2xl font-semibold mb-2 text-center">
           Choose Your Direction

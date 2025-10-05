@@ -8,10 +8,12 @@ import { Button } from "@/components/ui/button";
 import PlanetBackground from "@/components/visuals/PlanetBackground";
 
 const FALLBACK_NAMES = [
-  "Celestial Being, Explorer",
+  "Celestial Being",
+  "Life Explorer",
   "Seeker",
   "Traveler",
-  "Beautiful Soul, Cowboy of Life"
+  "Beautiful Soul",
+  "Conscious Mind"
 ];
 
 export default function MainPage() {

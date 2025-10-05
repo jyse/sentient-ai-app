@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
+import PlanetBackground from "@/components/visuals/PlanetBackground";
 
 type UserProfile = {
   email: string;
@@ -95,14 +96,16 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-purple-950 flex items-center justify-center text-white">
+      <div className="min-h-screen bg-brand flex items-center justify-center text-white">
+        <PlanetBackground />
         <p>Loading your profile...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-purple-950 text-white p-8">
+    <div className="min-h-screen bg-brand text-white p-8">
+      <PlanetBackground />
       <div className="max-w-4xl mx-auto">
         {/* Profile Header */}
         <div className="text-center mb-12">

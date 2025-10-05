@@ -1,7 +1,5 @@
-// src/components/ui/NavigationButtons.tsx
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 
 interface NavigationButtonsProps {
@@ -20,23 +18,27 @@ export default function NavigationButtons({
   disabled = false
 }: NavigationButtonsProps) {
   return (
-    <div className="flex items-center justify-between w-full max-w-2xl mt-auto mb-8">
-      <Button
-        variant="ghost"
+    <div className="flex items-center justify-between w-full max-w-[520px]">
+      <button
         onClick={onBack}
         className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
       >
         <ArrowLeft className="w-4 h-4" /> {backLabel}
-      </Button>
+      </button>
 
-      <Button
-        onClick={onNext}
+      <button
+        onClick={!disabled ? onNext : undefined}
         disabled={disabled}
-        className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 
-                   text-white font-medium px-6 py-2 rounded-xl shadow-lg transition-all"
+        className={`flex items-center gap-2 px-6 py-2 rounded-xl font-medium shadow-lg transition-all duration-300
+          ${
+            disabled
+              ? "bg-gray-700/40 text-gray-400 cursor-not-allowed"
+              : "bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+          }`}
       >
-        {nextLabel} <ArrowRight className="w-4 h-4" />
-      </Button>
+        {nextLabel}
+        <ArrowRight className="w-4 h-4" />
+      </button>
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Pause, Play, SkipForward } from "lucide-react";
+import PlanetBackground from "@/components/visuals/PlanetBackground";
 
 // 🎨 Emotion → background color
 const EMOTION_COLORS: Record<
@@ -321,7 +322,8 @@ export default function MeditationSessionPage() {
   // ---------- UI ----------
   if (loading) {
     return (
-      <div className="min-h-screen bg-purple-950 flex items-center justify-center text-white">
+      <div className="min-h-screen bg-brand flex items-center justify-center text-white">
+        <PlanetBackground />
         <p>Loading your meditation...</p>
       </div>
     );
@@ -329,7 +331,8 @@ export default function MeditationSessionPage() {
 
   if (!entry || !entry.target_emotion || !meditation.length) {
     return (
-      <div className="min-h-screen bg-purple-950 flex flex-col items-center justify-center text-white gap-4">
+      <div className="min-h-screen bg-brand flex flex-col items-center justify-center text-white gap-4">
+        <PlanetBackground />
         <p>Something went wrong.</p>
         <Button onClick={() => router.push("/check-in")}>Start Over</Button>
       </div>
@@ -338,7 +341,8 @@ export default function MeditationSessionPage() {
 
   if (sessionComplete) {
     return (
-      <div className="min-h-screen bg-purple-950 flex flex-col items-center justify-center text-white">
+      <div className="min-h-screen bg-brand flex flex-col items-center justify-center text-white">
+        <PlanetBackground />
         <h2 className="text-4xl font-bold mb-4">Beautiful work</h2>
         <p className="text-gray-300">You completed your meditation.</p>
       </div>

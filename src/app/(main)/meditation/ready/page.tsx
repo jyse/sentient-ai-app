@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import PlanetBackground from "@/components/visuals/PlanetBackground";
 
 type MoodEntry = {
   id: string;
@@ -22,15 +23,6 @@ export type MeditationPhase = {
   text: string;
   theme?: MeditationTheme;
 };
-
-// [
-// { "phase": "Awareness", "text": "Notice how you're feeling...", "theme": { "duration": 90 } },
-// { "phase": "Acceptance", "text": "Allow this feeling to be here...", "theme": { "duration": 90 } },
-// { "phase": "Processing", "text": "Take a slow breath in...", "theme": { "duration": 90 } },
-// { "phase": "Reframing", "text": "Notice new possibilities emerging...", "theme": { "duration": 90 } },
-// { "phase": "Integration", "text": "Feel this new calm settling in...", "theme": { "duration": 90 } },
-// { "phase": "Maintenance", "text": "Remember you can return here anytime...", "theme": { "duration": 90 } }
-// ]
 
 export default function MeditationReadyPage() {
   const router = useRouter();
@@ -128,10 +120,8 @@ export default function MeditationReadyPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-purple-950 text-white relative overflow-hidden flex flex-col items-center justify-center p-8">
-      {/* Floating background shapes */}
-      <div className="absolute top-20 left-20 w-48 h-48 bg-purple-600 rounded-full blur-3xl opacity-60" />
-      <div className="absolute bottom-32 right-20 w-56 h-56 bg-orange-600 rounded-full blur-3xl opacity-50" />
+    <div className="min-h-screen bg-brand text-white relative overflow-hidden flex flex-col items-center justify-center p-8">
+      <PlanetBackground />
 
       <div className="relative z-10 text-center max-w-lg">
         {countdown !== null ? (
