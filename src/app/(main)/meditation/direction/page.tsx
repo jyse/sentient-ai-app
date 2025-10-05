@@ -9,6 +9,7 @@ import {
   getEmotionDisplay
 } from "@/lib/emotionProgressions";
 import PlanetBackground from "@/components/visuals/PlanetBackground";
+import NavigationButtons from "@/components/ui/NavigationButtons";
 
 export default function MeditationDirectionPage() {
   const router = useRouter();
@@ -157,21 +158,15 @@ export default function MeditationDirectionPage() {
           })}
         </div>
 
-        {/* Feedback */}
         {feedback && <p className="text-sm text-purple-300 mb-4">{feedback}</p>}
 
-        {/* Buttons */}
-        <div className="flex gap-4">
-          <Button
-            variant="outline"
-            onClick={() => router.push(`/check-in?entry_id=${entryId}`)}
-          >
-            Back
-          </Button>
-          <Button onClick={handleSubmit} disabled={!selectedTarget || loading}>
-            {loading ? "Saving..." : "Guide me"}
-          </Button>
-        </div>
+        <NavigationButtons
+          onBack={() => router.push(`/check-in?entry_id=${entryId}`)}
+          onNext={handleSubmit}
+          nextLabel="Guide Me"
+          backLabel="Back"
+          disabled={!selectedTarget || loading}
+        />
       </div>
     </div>
   );

@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-import { Button } from "@/components/ui/button";
 import PlanetBackground from "@/components/visuals/PlanetBackground";
+import NavigationButtons from "@/components/ui/NavigationButtons";
 
 type UserProfile = {
   email: string;
@@ -119,16 +119,14 @@ export default function ProfilePage() {
               <p className="text-gray-400">{profile?.email}</p>
             </div>
           </div>
-
-          {/* Stats & Preferences Grid */}
           <div className="grid md:grid-cols-2 gap-6">
             {/* Meditation Stats */}
             <div className="bg-white/[0.05] border border-white/[0.08] backdrop-blur-xl rounded-3xl p-8 shadow-[0_0_40px_rgba(0,0,0,0.4)]">
-              <div className="bg-black/30 border border-white/10 rounded-xl p-4 text-center hover:bg-white/[0.08] transition-colors flex flex-col pb-12">
-                <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+              <div className="bg-gradient-to-br from-black/40 to-black/20 border border-white/[0.15] rounded-2xl p-6 h-full flex flex-col">
+                <h2 className="text-xl font-semibold mb-5 flex items-center gap-2">
                   📊 Meditation Stats
                 </h2>
-                <div className="space-y-4">
+                <div className="space-y-6 flex-1 flex flex-col justify-center">
                   <div className="flex justify-between items-center">
                     <span className="text-gray-400">Sessions Complete</span>
                     <span className="text-2xl font-bold text-white">
@@ -147,52 +145,55 @@ export default function ProfilePage() {
 
             {/* Meditation Preferences */}
             <div className="bg-white/[0.05] border border-white/[0.08] backdrop-blur-xl rounded-3xl p-8 shadow-[0_0_40px_rgba(0,0,0,0.4)]">
-              <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
-                ⚙️ Meditation Preferences
-              </h2>
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm text-gray-300 block mb-2">
-                    Voice Style
-                  </label>
-                  <div className="flex gap-2">
-                    {["Gentle", "Warm", "Neutral"].map((style) => (
-                      <button
-                        key={style}
-                        className={`px-4 py-2 rounded-lg text-sm transition-all ${
-                          style === "Warm"
-                            ? "bg-purple-600 text-white"
-                            : "bg-black/30 border border-white/10 text-gray-400 hover:bg-white/[0.08]"
-                        }`}
-                      >
-                        {style}
-                      </button>
-                    ))}
+              <div className="bg-gradient-to-br from-black/40 to-black/20 border border-white/[0.15] rounded-2xl p-6">
+                <h2 className="text-xl font-semibold mb-5 flex items-center gap-2">
+                  ⚙️ Meditation Preferences
+                </h2>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm text-gray-300 font-medium block mb-2">
+                      Voice Style
+                    </label>
+                    <div className="flex gap-2">
+                      {["Gentle", "Warm", "Neutral"].map((style) => (
+                        <button
+                          key={style}
+                          className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                            style === "Warm"
+                              ? "bg-purple-600 text-white"
+                              : "bg-black/40 border border-white/10 text-gray-400 hover:bg-white/[0.08]"
+                          }`}
+                        >
+                          {style}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-300 block mb-2">
-                    Session Duration
-                  </label>
-                  <div className="flex gap-2">
-                    {["10-15 min", "15-20 min", "20-25 min"].map((duration) => (
-                      <button
-                        key={duration}
-                        className={`px-4 py-2 rounded-lg text-sm transition-all ${
-                          duration === "15-20 min"
-                            ? "bg-purple-600 text-white"
-                            : "bg-black/30 border border-white/10 text-gray-400 hover:bg-white/[0.08]"
-                        }`}
-                      >
-                        {duration}
-                      </button>
-                    ))}
+                  <div>
+                    <label className="text-sm text-gray-300 font-medium block mb-2">
+                      Session Duration
+                    </label>
+                    <div className="flex gap-2">
+                      {["10-15 min", "15-20 min", "20-25 min"].map(
+                        (duration) => (
+                          <button
+                            key={duration}
+                            className={`flex-1 px-2 py-2 rounded-lg text-sm font-medium transition-all ${
+                              duration === "15-20 min"
+                                ? "bg-purple-600 text-white"
+                                : "bg-black/40 border border-white/10 text-gray-400 hover:bg-white/[0.08]"
+                            }`}
+                          >
+                            {duration}
+                          </button>
+                        )
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-
           {/* Recent Check-ins */}
           <div className="bg-white/[0.05] border border-white/[0.08] backdrop-blur-xl rounded-3xl p-8 shadow-[0_0_40px_rgba(0,0,0,0.4)]">
             <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
@@ -223,7 +224,6 @@ export default function ProfilePage() {
               )}
             </div>
           </div>
-
           {/* Data & Privacy Section */}
           <div className="bg-white/[0.05] border border-white/[0.08] backdrop-blur-xl rounded-3xl p-8 shadow-[0_0_40px_rgba(0,0,0,0.4)]">
             <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
@@ -245,27 +245,16 @@ export default function ProfilePage() {
               </p>
             </div>
           </div>
-
-          {/* Actions */}
-          <div className="flex gap-4 justify-center pb-8">
-            <Button
-              onClick={() => router.push("/check-in")}
-              className="bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-xl"
-            >
-              New Meditation
-            </Button>
-            <Button
-              variant="outline"
-              onClick={async () => {
-                await supabase.auth.signOut();
-                router.push("/");
-              }}
-              className="border border-white/10 bg-black/30 text-gray-300 hover:bg-white/[0.08] px-6 py-3 rounded-xl"
-            >
-              Sign Out
-            </Button>
-          </div>
         </div>
+        <NavigationButtons
+          onBack={async () => {
+            await supabase.auth.signOut();
+            router.push("/");
+          }}
+          onNext={() => router.push("/check-in")}
+          nextLabel="New Meditation"
+          backLabel="Sign Out"
+        />
       </div>
     </div>
   );
