@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,17 +12,14 @@ import { Heart, Sparkles, Eye, EyeOff } from "lucide-react";
 import { z } from "zod";
 import PlanetBackground from "../../../components/visuals/PlanetBackground";
 
-// Validation schema
 const authSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  name: z.string().min(2, "Name must be at least 2 characters").optional()
+  password: z.string().min(6, "Password must be at least 6 characters")
 });
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const router = useRouter();
 
   const handleAuth = async (
     event: React.FormEvent<HTMLFormElement>,
@@ -37,12 +33,7 @@ export default function LoginPage() {
     const password = formData.get("password") as string;
 
     try {
-      // Validate form data
-      const validationData = isSignUp
-        ? { email, password }
-        : { email, password };
-
-      authSchema.parse(validationData);
+      authSchema.parse({ email, password });
 
       if (isSignUp) {
         const { error } = await supabase.auth.signUp({
@@ -55,7 +46,7 @@ export default function LoginPage() {
 
         if (error) throw error;
 
-        // Success toast for sign up
+        console.log("👍 Sign up is succesful!");
         toast.success("Welcome to your wellness journey!", {
           description:
             "Your account has been created. Check your email to verify your account."
@@ -68,7 +59,7 @@ export default function LoginPage() {
 
         if (error) throw error;
 
-        // Success toast for sign in
+        console.log("👋 Welcome back signing in!");
         toast.success("Welcome back!", {
           description: "Ready to continue your emotional wellness journey?"
         });
@@ -76,23 +67,22 @@ export default function LoginPage() {
         window.location.href = "/";
       }
     } catch (error: unknown) {
-      // Type guard to check if it's an Error instance
-      if (error instanceof Error) {
-        console.error("Auth error:", error);
-      }
+      console.error("Auth error:", error);
+
       // Check if it's a Zod validation error
       if (error instanceof z.ZodError) {
+        const zodError = error as z.ZodError;
         toast.error("Please check your input", {
-          description: error.message
+          description: zodError.issues[0].message
         });
       } else if (error instanceof Error) {
-        // Supabase or other errors
+        console.log("👹 Oh oh something went wrong at signup/login");
         toast.error(isSignUp ? "Signup failed" : "Login failed", {
           description:
             error.message || "Something went wrong. Please try again."
         });
       } else {
-        // Unknown error type
+        console.log("👹 Oh oh something went wrong. Signup/login failed");
         toast.error(isSignUp ? "Signup failed" : "Login failed", {
           description: "Something went wrong. Please try again."
         });
@@ -104,39 +94,30 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-brand">
-      {/* Background Layer */}
       <PlanetBackground />
-
-      {/* Content Layer */}
       <div className="relative z-10 flex items-center justify-center min-h-screen p-6">
         <div className="w-full max-w-md">
-          {/* Header Section */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/20 border border-purple-400/30 text-purple-300 mb-6">
               <Sparkles className="w-4 h-4" />
               <span className="text-sm font-medium">Mindful AI Companion</span>
             </div>
-
             <h1 className="text-4xl font-bold mb-2 text-white">
               Welcome to{" "}
               <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
                 Sentient AI
               </span>
             </h1>
-
             <p className="text-gray-400">
               Your personal AI companion for emotional wellness
             </p>
           </div>
-
-          {/* Auth Card */}
           <Card className="border-white/10 bg-white/5 backdrop-blur-xl shadow-2xl">
             <CardHeader className="text-center pb-4">
               <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-purple-500/50">
                 <Heart className="w-8 h-8 text-white" />
               </div>
             </CardHeader>
-
             <CardContent>
               <Tabs defaultValue="signin" className="w-full">
                 <TabsList className="grid w-full grid-cols-2 mb-6 bg-white/5">
