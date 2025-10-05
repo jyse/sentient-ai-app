@@ -103,7 +103,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-[#0b0b14]">
+    <div className="min-h-screen relative overflow-hidden bg-brand">
       {/* Background Layer */}
       <PlanetBackground />
 

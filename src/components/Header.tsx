@@ -19,7 +19,7 @@ export default function Header() {
 
   return (
     <>
-      <header className="flex items-center justify-between px-6 py-4 bg-purple-950 text-white shadow-md">
+      <header className="flex items-center justify-between px-6 py-4 bg-[#0b0b14] text-white shadow-md">
         <Link href="/" className="font-bold text-lg">
           SentientAI
         </Link>

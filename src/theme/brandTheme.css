@@ -32,6 +32,11 @@
   );
 }
 
+/* Later you could also add this to a themes.ts */
+.bg-brand {
+  background: #0b0b14;
+}
+
 .floating-orb {
   position: absolute;
   border-radius: 9999px;
@@ -62,6 +67,16 @@
   border: 2px solid rgba(255, 255, 255, 0.2);
   opacity: 0;
   animation: ripple 4s ease-out infinite;
+}
+
+.centered-circle {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 9999px;
+  width: 24rem;
+  height: 24rem;
 }
 
 @keyframes float {
