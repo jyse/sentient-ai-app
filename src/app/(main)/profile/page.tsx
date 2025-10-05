@@ -104,160 +104,167 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-brand text-white p-8">
+    <div className="min-h-screen bg-brand text-white relative overflow-hidden">
       <PlanetBackground />
-      <div className="max-w-4xl mx-auto">
-        {/* Profile Header */}
-        <div className="text-center mb-12">
-          <div className="w-24 h-24 bg-purple-600 rounded-full mx-auto mb-4 flex items-center justify-center text-3xl">
-            👤
-          </div>
-          <h1 className="text-3xl font-bold mb-2">{profile?.username}</h1>
-          <p className="text-gray-400">{profile?.email}</p>
-        </div>
 
-        {/* Stats & Preferences Grid */}
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
-          {/* Meditation Stats */}
-          <div className="bg-gray-900/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-800">
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              📊 Meditation Stats
-            </h2>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-400">Sessions Complete</span>
-                <span className="text-2xl font-bold text-white">
-                  {stats.sessionsComplete}
-                </span>
+      <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-6">
+        <div className="w-full max-w-4xl space-y-6">
+          {/* Profile Header */}
+          <div className="w-full bg-white/[0.05] border border-white/[0.08] backdrop-blur-xl rounded-3xl p-8 shadow-[0_0_40px_rgba(0,0,0,0.4)]">
+            <div className="text-center">
+              <div className="w-24 h-24 bg-purple-600 rounded-full mx-auto mb-4 flex items-center justify-center text-3xl">
+                👤
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-400">Total Minutes</span>
-                <span className="text-2xl font-bold text-orange-500">
-                  {stats.totalMinutes}
-                </span>
+              <h1 className="text-3xl font-bold mb-2">{profile?.username}</h1>
+              <p className="text-gray-400">{profile?.email}</p>
+            </div>
+          </div>
+
+          {/* Stats & Preferences Grid */}
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Meditation Stats */}
+            <div className="bg-white/[0.05] border border-white/[0.08] backdrop-blur-xl rounded-3xl p-8 shadow-[0_0_40px_rgba(0,0,0,0.4)]">
+              <div className="bg-black/30 border border-white/10 rounded-xl p-4 text-center hover:bg-white/[0.08] transition-colors flex flex-col pb-12">
+                <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+                  📊 Meditation Stats
+                </h2>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400">Sessions Complete</span>
+                    <span className="text-2xl font-bold text-white">
+                      {stats.sessionsComplete}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400">Total Minutes</span>
+                    <span className="text-2xl font-bold text-orange-500">
+                      {stats.totalMinutes}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Meditation Preferences */}
+            <div className="bg-white/[0.05] border border-white/[0.08] backdrop-blur-xl rounded-3xl p-8 shadow-[0_0_40px_rgba(0,0,0,0.4)]">
+              <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+                ⚙️ Meditation Preferences
+              </h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm text-gray-300 block mb-2">
+                    Voice Style
+                  </label>
+                  <div className="flex gap-2">
+                    {["Gentle", "Warm", "Neutral"].map((style) => (
+                      <button
+                        key={style}
+                        className={`px-4 py-2 rounded-lg text-sm transition-all ${
+                          style === "Warm"
+                            ? "bg-purple-600 text-white"
+                            : "bg-black/30 border border-white/10 text-gray-400 hover:bg-white/[0.08]"
+                        }`}
+                      >
+                        {style}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-300 block mb-2">
+                    Session Duration
+                  </label>
+                  <div className="flex gap-2">
+                    {["10-15 min", "15-20 min", "20-25 min"].map((duration) => (
+                      <button
+                        key={duration}
+                        className={`px-4 py-2 rounded-lg text-sm transition-all ${
+                          duration === "15-20 min"
+                            ? "bg-purple-600 text-white"
+                            : "bg-black/30 border border-white/10 text-gray-400 hover:bg-white/[0.08]"
+                        }`}
+                      >
+                        {duration}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Meditation Preferences */}
-          <div className="bg-gray-900/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-800">
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              ⚙️ Meditation Preferences
+          {/* Recent Check-ins */}
+          <div className="bg-white/[0.05] border border-white/[0.08] backdrop-blur-xl rounded-3xl p-8 shadow-[0_0_40px_rgba(0,0,0,0.4)]">
+            <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+              ❤️ Recent Emotional Check-ins
             </h2>
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm text-gray-400 block mb-2">
-                  Voice Style
-                </label>
-                <div className="flex gap-2">
-                  {["Gentle", "Warm", "Neutral"].map((style) => (
-                    <button
-                      key={style}
-                      className={`px-4 py-2 rounded-lg text-sm transition-all ${
-                        style === "Warm"
-                          ? "bg-purple-600 text-white"
-                          : "bg-gray-800 text-gray-400 hover:bg-gray-700"
-                      }`}
-                    >
-                      {style}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="text-sm text-gray-400 block mb-2">
-                  Session Duration
-                </label>
-                <div className="flex gap-2">
-                  {["10-15 min", "15-20 min", "20-25 min"].map((duration) => (
-                    <button
-                      key={duration}
-                      className={`px-4 py-2 rounded-lg text-sm transition-all ${
-                        duration === "15-20 min"
-                          ? "bg-purple-600 text-white"
-                          : "bg-gray-800 text-gray-400 hover:bg-gray-700"
-                      }`}
-                    >
-                      {duration}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Recent Check-ins */}
-        <div className="bg-gray-900/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-800 mb-8">
-          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-            ❤️ Recent Emotional Check-ins
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-            {recentCheckIns.length > 0 ? (
-              recentCheckIns.map((checkIn, index) => (
-                <div
-                  key={index}
-                  className="bg-gray-800/50 rounded-xl p-4 text-center hover:bg-gray-800 transition-colors"
-                >
-                  <p className="text-sm text-gray-400 mb-2">{checkIn.date}</p>
-                  <p className="font-semibold text-white capitalize">
-                    {checkIn.emotion}
-                  </p>
-                  {checkIn.target_emotion && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      → {checkIn.target_emotion}
+            <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+              {recentCheckIns.length > 0 ? (
+                recentCheckIns.map((checkIn, index) => (
+                  <div
+                    key={index}
+                    className="bg-black/30 border border-white/10 rounded-xl p-4 text-center hover:bg-white/[0.08] transition-colors"
+                  >
+                    <p className="text-sm text-gray-400 mb-2">{checkIn.date}</p>
+                    <p className="font-semibold text-white capitalize">
+                      {checkIn.emotion}
                     </p>
-                  )}
-                </div>
-              ))
-            ) : (
-              <p className="text-gray-500 col-span-full text-center py-4">
-                No check-ins yet. Start your first meditation!
+                    {checkIn.target_emotion && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        → {checkIn.target_emotion}
+                      </p>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-500 col-span-full text-center py-4">
+                  No check-ins yet. Start your first meditation!
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Data & Privacy Section */}
+          <div className="bg-white/[0.05] border border-white/[0.08] backdrop-blur-xl rounded-3xl p-8 shadow-[0_0_40px_rgba(0,0,0,0.4)]">
+            <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+              🔒 Data & Privacy
+            </h2>
+            <div className="space-y-3 text-sm text-gray-300">
+              <p>
+                <strong>What we store:</strong> Your moods and notes are saved
+                privately in your account (only visible to you).
               </p>
-            )}
+              <p>
+                <strong>What we share:</strong> For personalized meditations,
+                only your mood + note text may be sent to our AI service — never
+                your identity (like your email).
+              </p>
+              <p>
+                <strong>How long:</strong> Entries stay in your account until
+                you delete them.
+              </p>
+            </div>
           </div>
-        </div>
 
-        {/* Data & Privacy Section */}
-        <div className="bg-gray-900/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-800 mb-8">
-          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-            🔒 Data & Privacy
-          </h2>
-          <div className="space-y-3 text-sm text-gray-300">
-            <p>
-              <strong>What we store:</strong> Your moods and notes are saved
-              privately in your account (only visible to you).
-            </p>
-            <p>
-              <strong>What we share:</strong> For personalized meditations, only
-              your mood + note text may be sent to our AI service — never your
-              identity (like your email).
-            </p>
-            <p>
-              <strong>How long:</strong> Entries stay in your account until you
-              delete them.
-            </p>
+          {/* Actions */}
+          <div className="flex gap-4 justify-center pb-8">
+            <Button
+              onClick={() => router.push("/check-in")}
+              className="bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-xl"
+            >
+              New Meditation
+            </Button>
+            <Button
+              variant="outline"
+              onClick={async () => {
+                await supabase.auth.signOut();
+                router.push("/");
+              }}
+              className="border border-white/10 bg-black/30 text-gray-300 hover:bg-white/[0.08] px-6 py-3 rounded-xl"
+            >
+              Sign Out
+            </Button>
           </div>
-        </div>
-
-        {/* Actions */}
-        <div className="flex gap-4 justify-center">
-          <Button
-            onClick={() => router.push("/check-in")}
-            className="bg-purple-600 hover:bg-purple-700"
-          >
-            New Meditation
-          </Button>
-          <Button
-            variant="outline"
-            onClick={async () => {
-              await supabase.auth.signOut();
-              router.push("/");
-            }}
-            className="border-gray-700 text-gray-300 hover:bg-gray-800"
-          >
-            Sign Out
-          </Button>
         </div>
       </div>
     </div>
