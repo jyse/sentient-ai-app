@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
@@ -31,11 +30,11 @@ export default function MainPage() {
       setUser(user);
 
       if (user) {
-        // Try to get name from user metadata or generate fallback
         const name =
           user.user_metadata?.name ||
           FALLBACK_NAMES[Math.floor(Math.random() * FALLBACK_NAMES.length)];
         setUserName(name);
+        console.log(`✨Hi ${name}, wonderful to have you here!`);
       }
 
       setLoading(false);
@@ -53,6 +52,7 @@ export default function MainPage() {
   }, []);
 
   const handleSignOut = async () => {
+    console.log("👋 Signing out succesfully! Come back soon, bye!");
     toast.success("Signed out successfully", {
       description: "Come back soon for your next journey!"
     });
@@ -62,6 +62,7 @@ export default function MainPage() {
   };
 
   if (loading) {
+    console.log("🌀Loading...");
     return (
       <div className="min-h-screen bg-purple-950 flex items-center justify-center">
         <p className="text-white">Loading...</p>
@@ -72,24 +73,17 @@ export default function MainPage() {
   return (
     <div className="min-h-screen bg-brand text-white relative overflow-hidden">
       <PlanetBackground />
-      {/* Main content */}
       <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-8">
-        {/* Badge */}
         <div className="mb-6 px-4 py-2 bg-purple-800/50 rounded-full border border-purple-400/30 text-sm">
           ✨ Emotional Wellness Journey
         </div>
-
-        {/* Welcome text */}
         <h1 className="text-5xl font-bold mb-4 text-center">
           Welcome back, <span className="text-purple-300">{userName}</span>
         </h1>
-
         <p className="text-gray-300 text-center max-w-xl mb-6">
           Ready to explore your inner landscape? Let Sentient guide you through
           a personalized meditation crafted just for your emotional state.
         </p>
-
-        {/* Emotional Journey Preview */}
         <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 max-w-5xl mx-auto mb-6">
           {[
             {
@@ -138,7 +132,6 @@ export default function MainPage() {
             </div>
           ))}
         </div>
-
         <Button
           onClick={() => router.push("/check-in")}
           size="lg"
@@ -146,7 +139,6 @@ export default function MainPage() {
         >
           ❤️ Begin Your Journey
         </Button>
-
         <p className="text-sm text-gray-400 text-center max-w-md mb-8">
           Each journey is unique. Sentient will personalize your experience
           based on how you are feeling today.

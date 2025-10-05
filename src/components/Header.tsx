@@ -7,7 +7,6 @@ export default function Header() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
 
   useEffect(() => {
-    // Get initial user
     const getUser = async () => {
       const {
         data: { user }
@@ -16,7 +15,6 @@ export default function Header() {
     };
     getUser();
 
-    // Listen for auth state changes
     const {
       data: { subscription }
     } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -27,7 +25,6 @@ export default function Header() {
       }
     });
 
-    // Cleanup subscription on unmount
     return () => subscription.unsubscribe();
   }, []);
 
@@ -37,7 +34,6 @@ export default function Header() {
         <Link href="/" className="font-bold text-lg">
           SentientAI
         </Link>
-
         <nav className="flex items-center gap-6">
           <Link href="/privacy" className="text-sm hover:text-purple-300">
             Privacy
@@ -45,7 +41,6 @@ export default function Header() {
           <Link href="/terms" className="text-sm hover:text-purple-300">
             Terms
           </Link>
-
           {userEmail ? (
             <Link
               href="/profile"

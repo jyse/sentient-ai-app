@@ -59,6 +59,7 @@ export default function LoginPage() {
       }
     } catch (error: unknown) {
       if (error instanceof Error) {
+        console.log("👹👹👹 Something went wrong. Signup or Login failed.");
         toast.error(isSignUp ? "Signup failed" : "Login failed", {
           description:
             error.message || "Something went wrong. Please try again."
