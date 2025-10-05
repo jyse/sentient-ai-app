@@ -41,3 +41,5 @@ yarn-error.log*
 next-env.d.ts
 sentient_notes.txt
 chunk_*.txt
+resources/starter-template/
+resources/
