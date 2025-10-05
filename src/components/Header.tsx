@@ -7,6 +7,7 @@ export default function Header() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
 
   useEffect(() => {
+    // Get initial user
     const getUser = async () => {
       const {
         data: { user }
@@ -14,6 +15,20 @@ export default function Header() {
       if (user?.email) setUserEmail(user.email);
     };
     getUser();
+
+    // Listen for auth state changes
+    const {
+      data: { subscription }
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user?.email) {
+        setUserEmail(session.user.email);
+      } else {
+        setUserEmail(null);
+      }
+    });
+
+    // Cleanup subscription on unmount
+    return () => subscription.unsubscribe();
   }, []);
 
   return (

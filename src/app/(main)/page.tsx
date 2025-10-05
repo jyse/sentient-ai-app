@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import PlanetBackground from "@/components/visuals/PlanetBackground";
 
 const FALLBACK_NAMES = [
@@ -52,7 +53,12 @@ export default function MainPage() {
   }, []);
 
   const handleSignOut = async () => {
+    toast.success("Signed out successfully", {
+      description: "Come back soon for your next journey!"
+    });
+
     await supabase.auth.signOut();
+    window.location.href = "/login";
   };
 
   if (loading) {
