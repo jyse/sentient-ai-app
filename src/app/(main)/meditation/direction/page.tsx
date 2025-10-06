@@ -10,7 +10,9 @@ import NavigationButtons from "@/components/ui/NavigationButtons";
 
 export default function MeditationDirectionPage() {
   const [currentMood, setCurrentMood] = useState<string | null>(null);
-  const [selectedTarget, setSelectedTarget] = useState<string | null>(null);
+  const [selectedTargetEmotion, setSelectedTargetEmotion] = useState<
+    string | null
+  >(null);
   const router = useRouter();
   const searchParams = useSearchParams();
   const entryId = searchParams.get("entry_id");
@@ -39,7 +41,7 @@ export default function MeditationDirectionPage() {
       } else if (data) {
         setCurrentMood(data.current_emotion);
         if (data.target_emotion) {
-          setSelectedTarget(data.target_emotion);
+          setSelectedTargetEmotion(data.target_emotion);
         }
       }
       setFetchingMood(false);
@@ -50,12 +52,13 @@ export default function MeditationDirectionPage() {
   const targetEmotionIds = getTargetEmotions(currentMood);
 
   const handleSubmit = async () => {
-    if (!selectedTarget || !entryId) return;
+    if (!selectedTargetEmotion || !entryId) return;
+    if (loading) return;
     setLoading(true);
 
     const { error } = await supabase
       .from("mood_entries")
-      .update({ target_emotion: selectedTarget })
+      .update({ target_emotion: selectedTargetEmotion })
       .eq("id", entryId);
 
     setLoading(false);
@@ -109,8 +112,8 @@ export default function MeditationDirectionPage() {
         <div className="flex items-center gap-2 mb-8 text-lg">
           <span>{getEmotionDisplay(currentMood)?.emoji}</span>
           <span className="text-gray-400">→</span>
-          {selectedTarget ? (
-            <span>{getEmotionDisplay(selectedTarget)?.emoji}</span>
+          {selectedTargetEmotion ? (
+            <span>{getEmotionDisplay(selectedTargetEmotion)?.emoji}</span>
           ) : (
             <span className="text-gray-600">?</span>
           )}
@@ -121,12 +124,12 @@ export default function MeditationDirectionPage() {
             return (
               <button
                 key={targetEmotion}
-                onClick={() => setSelectedTarget(targetEmotion)}
-                aria-pressed={selectedTarget === targetEmotion}
+                onClick={() => setSelectedTargetEmotion(targetEmotion)}
+                aria-pressed={selectedTargetEmotion === targetEmotion}
                 className={`
                   relative p-6 rounded-2xl border-2 transition-all duration-300 min-w-[140px]
                   ${
-                    selectedTarget === targetEmotion
+                    selectedTargetEmotion === targetEmotion
                       ? "bg-gray-800 border-purple-500 scale-105"
                       : "bg-gray-900/50 border-gray-700 hover:bg-gray-800/70 hover:border-gray-600"
                   }
@@ -151,7 +154,7 @@ export default function MeditationDirectionPage() {
               onNext={handleSubmit}
               nextLabel="Guide Me"
               backLabel="Back"
-              disabled={!selectedTarget || loading}
+              disabled={!selectedTargetEmotion || loading}
             />
           </div>
         </div>
