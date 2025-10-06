@@ -9,9 +9,9 @@ import { CHECK_IN_MOODS } from "../../../lib/constants";
 
 export default function CheckInPage() {
   const router = useRouter();
+  const [selectedMood, setSelectedMood] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const entryId = searchParams.get("entry_id");
-  const [selectedMood, setSelectedMood] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState("");

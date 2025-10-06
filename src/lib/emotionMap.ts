@@ -1,17 +1,15 @@
-// src/lib/emotionProgressions.ts
-
 export const EMOTION_PROGRESSIONS: Record<string, string[]> = {
-  // High arousal, negative → reduce arousal to low arousal, positive
+  // High frequency, negative → reduce arousal to low arousal, positive
   anxious: ["calm", "grounded", "peaceful"],
   worried: ["calm", "accepting", "peaceful"],
   stressed: ["relaxed", "calm", "peaceful"],
 
-  // High arousal, negative → reduce arousal OR shift valence
+  // High frequency, negative → reduce intensity OR shift valence
   angry: ["calm", "accepting", "peaceful"],
   frustrated: ["patient", "calm", "accepting"],
   irritated: ["calm", "patient", "accepting"],
 
-  // Low arousal, negative → shift valence to positive
+  // Low frequency, negative → shift valence to positive
   sad: ["accepting", "content", "peaceful"],
   depressed: ["accepting", "hopeful", "calm"],
   lonely: ["connected", "accepting", "peaceful"],
@@ -27,7 +25,6 @@ export const EMOTION_PROGRESSIONS: Record<string, string[]> = {
   happy: ["joyful", "grateful", "energized"]
 };
 
-// In lib/emotionProgressions.ts
 export function getTargetEmotions(currentEmotion: string | null): string[] {
   if (!currentEmotion) return ["calm", "peaceful", "content"];
   return (
@@ -65,14 +62,67 @@ export const EMOTION_DISPLAY: Record<
     description: "Gentle satisfaction",
     emoji: "😊",
     color: "bg-orange-600"
+  },
+  accepting: {
+    label: "Accepting",
+    description: "Allowing what is",
+    emoji: "🤲",
+    color: "bg-amber-600"
+  },
+  patient: {
+    label: "Patient",
+    description: "Steady and calm",
+    emoji: "🐢",
+    color: "bg-yellow-600"
+  },
+  grounded: {
+    label: "Grounded",
+    description: "Centered and stable",
+    emoji: "🌱",
+    color: "bg-green-700"
+  },
+  hopeful: {
+    label: "Hopeful",
+    description: "Looking forward",
+    emoji: "🌈",
+    color: "bg-sky-500"
+  },
+  connected: {
+    label: "Connected",
+    description: "In touch with others",
+    emoji: "🤝",
+    color: "bg-rose-500"
+  },
+  curious: {
+    label: "Curious",
+    description: "Open to discovery",
+    emoji: "🪶",
+    color: "bg-indigo-500"
+  },
+  joyful: {
+    label: "Joyful",
+    description: "Light and radiant",
+    emoji: "☀️",
+    color: "bg-yellow-400"
+  },
+  energized: {
+    label: "Energized",
+    description: "Alive and vibrant",
+    emoji: "⚡",
+    color: "bg-lime-500"
+  },
+  relaxed: {
+    label: "Relaxed",
+    description: "Ease and comfort",
+    emoji: "😌",
+    color: "bg-cyan-600"
   }
-  // ... add all emotions you use
 };
 
-export function getEmotionDisplay(emotionId: string) {
+export function getEmotionDisplay(targetEmotion: string) {
   return (
-    EMOTION_DISPLAY[emotionId] || {
-      label: emotionId,
+    EMOTION_DISPLAY[targetEmotion] || {
+      label: targetEmotion,
       description: "Finding balance",
       emoji: "✨",
       color: "bg-purple-600"

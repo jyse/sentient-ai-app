@@ -4,28 +4,24 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
-import {
-  getTargetEmotions,
-  getEmotionDisplay
-} from "@/lib/emotionProgressions";
+import { getTargetEmotions, getEmotionDisplay } from "@/lib/emotionMap";
 import PlanetBackground from "@/components/visuals/PlanetBackground";
 import NavigationButtons from "@/components/ui/NavigationButtons";
 
 export default function MeditationDirectionPage() {
+  const [currentMood, setCurrentMood] = useState<string | null>(null);
+  const [selectedTarget, setSelectedTarget] = useState<string | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
   const entryId = searchParams.get("entry_id");
-
-  const [currentMood, setCurrentMood] = useState<string | null>(null);
-  const [selectedTarget, setSelectedTarget] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState("");
   const [fetchingMood, setFetchingMood] = useState(true);
 
-  // Fetch current mood from DB
   useEffect(() => {
     const fetchCurrentMood = async () => {
       if (!entryId) {
+        console.log("👹 Missing entry information. Please start over");
         setFeedback("Missing entry information. Please start over.");
         setFetchingMood(false);
         return;
@@ -38,18 +34,16 @@ export default function MeditationDirectionPage() {
         .single();
 
       if (error) {
-        console.error("Error fetching mood entry:", error);
+        console.error("👹 Error fetching mood entry:", error);
         setFeedback("Couldn't load your check-in. Please try again.");
       } else if (data) {
         setCurrentMood(data.current_emotion);
         if (data.target_emotion) {
-          setSelectedTarget(data.target_emotion); // pre-fill if user already chose
+          setSelectedTarget(data.target_emotion);
         }
       }
-
       setFetchingMood(false);
     };
-
     fetchCurrentMood();
   }, [entryId]);
 
@@ -70,6 +64,7 @@ export default function MeditationDirectionPage() {
       console.log("👹Error updating target emotion:", error);
       setFeedback("Something went wrong. Please try again.");
     } else {
+      console.log("💫 Your meditation is being prepared!");
       setFeedback("Got it. Preparing your meditation...");
       setTimeout(() => {
         router.push(`/meditation/ready?entry_id=${entryId}`);
@@ -77,7 +72,6 @@ export default function MeditationDirectionPage() {
     }
   };
 
-  // Loading
   if (fetchingMood) {
     return (
       <div className="min-h-screen bg-purple-950 text-white flex items-center justify-center">
@@ -86,7 +80,6 @@ export default function MeditationDirectionPage() {
     );
   }
 
-  // Error
   if (!entryId || !currentMood) {
     return (
       <div className="min-h-screen bg-purple-950 text-white flex flex-col items-center justify-center gap-4">
@@ -100,24 +93,19 @@ export default function MeditationDirectionPage() {
     <div className="min-h-screen bg-brand text-white relative overflow-hidden">
       <PlanetBackground />
       <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-8">
-        {/* Header */}
         <h2 className="text-2xl font-semibold mb-2 text-center">
           Choose Your Direction
         </h2>
-        {/* Guidance */}
         <p className="text-gray-400 text-sm mb-4 text-center max-w-md">
           We’ll guide you gently, helping you shift from your current mood
           toward a calmer, lighter state.
         </p>
-        {/* Direction */}
         <p className="text-gray-400 text-sm mb-6 text-center max-w-md">
           You are feeling{" "}
           <span className="text-white font-medium">{currentMood}</span> right
           now. Choose the feeling you’d like this meditation to guide you
           toward.
         </p>
-
-        {/* Mood Transition Visual */}
         <div className="flex items-center gap-2 mb-8 text-lg">
           <span>{getEmotionDisplay(currentMood)?.emoji}</span>
           <span className="text-gray-400">→</span>
@@ -127,20 +115,18 @@ export default function MeditationDirectionPage() {
             <span className="text-gray-600">?</span>
           )}
         </div>
-
-        {/* Target Options */}
         <div className="flex gap-4 mb-8 flex-wrap justify-center max-w-2xl">
-          {targetEmotionIds.map((emotionId) => {
-            const display = getEmotionDisplay(emotionId);
+          {targetEmotionIds.map((targetEmotion) => {
+            const display = getEmotionDisplay(targetEmotion);
             return (
               <button
-                key={emotionId}
-                onClick={() => setSelectedTarget(emotionId)}
-                aria-pressed={selectedTarget === emotionId}
+                key={targetEmotion}
+                onClick={() => setSelectedTarget(targetEmotion)}
+                aria-pressed={selectedTarget === targetEmotion}
                 className={`
                   relative p-6 rounded-2xl border-2 transition-all duration-300 min-w-[140px]
                   ${
-                    selectedTarget === emotionId
+                    selectedTarget === targetEmotion
                       ? "bg-gray-800 border-purple-500 scale-105"
                       : "bg-gray-900/50 border-gray-700 hover:bg-gray-800/70 hover:border-gray-600"
                   }
