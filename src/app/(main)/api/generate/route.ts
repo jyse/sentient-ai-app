@@ -64,7 +64,7 @@ export async function POST(req: Request) {
         query_embedding: queryEmbedding,
         in_current: currentEmotion,
         in_target: targetEmotion,
-        match_count: 8 // a few more lines gives the model better grounding
+        match_count: 10
       }
     );
     if (rpcError) {
