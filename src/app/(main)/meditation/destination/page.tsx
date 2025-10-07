@@ -11,7 +11,7 @@ import {
 import PlanetBackground from "@/components/visuals/PlanetBackground";
 import NavigationButtons from "@/components/ui/NavigationButtons";
 
-export default function MeditationDirectionPage() {
+export default function MeditationDestinationPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const entryId = searchParams.get("entry_id");
@@ -51,13 +51,11 @@ export default function MeditationDirectionPage() {
         }
         setFetchingMood(false);
 
-        // ✅ Trigger fade-in after short delay
         setTimeout(() => {
           setContentVisible(true);
         }, 100);
       }
     };
-
     fetchCheckedInMood();
   }, [entryId]);
 
@@ -77,12 +75,10 @@ export default function MeditationDirectionPage() {
       setLoading(false);
     } else {
       console.log("💫 Your meditation is being prepared!");
-      // ✅ Keep loading true during navigation
       router.push(`/meditation/ready?entry_id=${entryId}`);
     }
   };
 
-  // ✅ Show loading overlay while fetching - prevents white flash
   if (fetchingMood) {
     return (
       <div className="min-h-screen bg-brand text-white relative overflow-hidden">
@@ -97,7 +93,6 @@ export default function MeditationDirectionPage() {
     );
   }
 
-  // ✅ Error state with same background
   if (!entryId || !checkedInMood) {
     return (
       <div className="min-h-screen bg-brand text-white relative overflow-hidden">
@@ -115,8 +110,6 @@ export default function MeditationDirectionPage() {
   return (
     <div className="min-h-screen bg-brand text-white relative overflow-hidden">
       <PlanetBackground />
-
-      {/* ✅ Fade-in animation for all content */}
       <div
         className={`relative z-10 min-h-screen flex flex-col items-center justify-center p-8 transition-opacity duration-700 ${
           contentVisible ? "opacity-100" : "opacity-0"
@@ -193,7 +186,7 @@ export default function MeditationDirectionPage() {
       </div>
 
       {/* ✅ Add custom animation styles */}
-      <style jsx global>{`
+      {/* <style jsx global>{`
         @keyframes fade-in-up {
           from {
             opacity: 0;
@@ -208,7 +201,17 @@ export default function MeditationDirectionPage() {
         .animate-fade-in-up {
           animation: fade-in-up 0.6s ease-out forwards;
         }
-      `}</style>
+      `}</style> */}
+
+      {/* Loading Overlay - Shows during navigation to ready page */}
+      {loading && (
+        <div className="fixed inset-0 z-50 bg-brand/95 backdrop-blur-sm flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-lg">Preparing your meditation...</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
