@@ -129,10 +129,10 @@ export default function MeditationReadyPage() {
       setMeditation(meditationJson);
       setProgress(50);
 
-      // ✅ Step 3: Preload ALL TTS audio files
+      // ✅ Step 3: Preload ALL TTS audio files (MODIFIED - store as base64)
       setCurrentStep("Preparing voice narration...");
 
-      const ttsCache: Record<number, { url: string; duration: number }> = {};
+      const ttsCache: Record<number, { base64: string; duration: number }> = {};
 
       for (let i = 0; i < meditationJson.length; i++) {
         const phase = meditationJson[i];
@@ -147,13 +147,21 @@ export default function MeditationReadyPage() {
           if (!ttsResponse.ok) throw new Error(`TTS failed for phase ${i}`);
 
           const blob = await ttsResponse.blob();
-          const url = URL.createObjectURL(blob);
+
+          // ✅ CHANGED: Convert blob to base64 instead of creating blob URL
+          const arrayBuffer = await blob.arrayBuffer();
+          const base64 = btoa(
+            String.fromCharCode(...new Uint8Array(arrayBuffer))
+          );
 
           // Measure audio duration
-          const audio = new Audio(url);
+          const tempUrl = URL.createObjectURL(blob);
+          const audio = new Audio(tempUrl);
           await new Promise<void>((resolve) => {
             audio.onloadedmetadata = () => {
-              ttsCache[i] = { url, duration: audio.duration * 1000 };
+              // ✅ CHANGED: Store base64 instead of URL
+              ttsCache[i] = { base64: base64, duration: audio.duration * 1000 };
+              URL.revokeObjectURL(tempUrl); // Clean up temp URL
               resolve();
             };
           });

@@ -90,9 +90,10 @@ export default function MeditationSessionPage() {
 
   const bgAudioRef = useRef<HTMLAudioElement | null>(null);
   const voiceAudioRef = useRef<HTMLAudioElement | null>(null);
-  const ttsCacheRef = useRef<Record<number, { url: string; duration: number }>>(
-    {}
-  );
+  const ttsCacheRef = useRef<
+    Record<number, { base64: string; duration: number }>
+  >({});
+  const blobUrlsRef = useRef<Record<number, string>>({});
   const currentPhaseRef = useRef(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -144,7 +145,6 @@ export default function MeditationSessionPage() {
             Object.keys(parsedCache).length,
             "entries"
           );
-          console.log("🎤 TTS Cache details:", parsedCache);
           ttsCacheRef.current = parsedCache;
         } else {
           console.warn("⚠️ No TTS cache found!");
@@ -193,35 +193,50 @@ export default function MeditationSessionPage() {
       bgAudioRef.current?.pause();
       if (voiceAudioRef.current) {
         voiceAudioRef.current.pause();
-        if (voiceAudioRef.current.src.startsWith("blob:")) {
-          URL.revokeObjectURL(voiceAudioRef.current.src);
-        }
       }
-      Object.values(ttsCacheRef.current).forEach(({ url }) => {
-        if (url.startsWith("blob:")) URL.revokeObjectURL(url);
+      // Clean up all blob URLs
+      Object.values(blobUrlsRef.current).forEach((url) => {
+        URL.revokeObjectURL(url);
       });
     };
   }, []);
 
+  // ✅ MODIFIED: Play narration - recreate blob URL from base64
   useEffect(() => {
     if (!isPlaying) return;
 
     if (voiceAudioRef.current) {
       voiceAudioRef.current.pause();
-      if (voiceAudioRef.current.src.startsWith("blob:")) {
-        URL.revokeObjectURL(voiceAudioRef.current.src);
-      }
       voiceAudioRef.current = null;
     }
 
     const data = ttsCacheRef.current[currentPhase];
-    console.log("🎤 Playing phase", currentPhase, "- TTS data:", data);
+    console.log("🎤 Playing phase", currentPhase, "- has data:", !!data);
 
-    if (data) {
-      const audio = new Audio(data.url);
-      audio.volume = 0.9;
-      voiceAudioRef.current = audio;
-      audio.play().catch((err) => console.warn("❌ Audio play failed:", err));
+    if (data && data.base64) {
+      try {
+        // ✅ CHANGED: Recreate blob URL from base64
+        const binary = atob(data.base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+        const blob = new Blob([bytes], { type: "audio/mpeg" });
+        const url = URL.createObjectURL(blob);
+
+        // Store for cleanup
+        blobUrlsRef.current[currentPhase] = url;
+
+        const audio = new Audio(url);
+        audio.volume = 0.9;
+        voiceAudioRef.current = audio;
+        audio
+          .play()
+          .then(() => console.log("✅ Audio playing for phase", currentPhase))
+          .catch((err) => console.warn("❌ Audio play failed:", err));
+      } catch (err) {
+        console.error("❌ Failed to recreate audio from base64:", err);
+      }
     } else {
       console.warn("⚠️ No TTS data for phase", currentPhase);
     }
@@ -307,9 +322,6 @@ export default function MeditationSessionPage() {
   const skipToNextPhase = () => {
     if (voiceAudioRef.current) {
       voiceAudioRef.current.pause();
-      if (voiceAudioRef.current.src.startsWith("blob:")) {
-        URL.revokeObjectURL(voiceAudioRef.current.src);
-      }
       voiceAudioRef.current = null;
     }
 
