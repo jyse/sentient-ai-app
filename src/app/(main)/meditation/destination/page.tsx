@@ -12,20 +12,20 @@ import PlanetBackground from "@/components/visuals/PlanetBackground";
 import NavigationButtons from "@/components/ui/NavigationButtons";
 
 export default function MeditationDirectionPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const entryId = searchParams.get("entry_id");
+
   const [checkedInMood, setCheckedInMood] = useState<string | null>(null);
   const [selectedDestinationMood, setSelectedDestinationMood] = useState<
     string | null
   >(null);
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const entryId = searchParams.get("entry_id");
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState("");
   const [fetchingMood, setFetchingMood] = useState(true);
 
   useEffect(() => {
     const fetchCheckedInMood = async () => {
-      console.log("fetching Mood");
       if (!entryId) {
         console.log("👹 Missing entry information. Please start over");
         setFeedback("Missing entry information. Please start over.");
@@ -42,28 +42,18 @@ export default function MeditationDirectionPage() {
       if (error) {
         console.error("👹 Error fetching mood entry:", error);
         setFeedback("Couldn't load your check-in. Please try again.");
+        setFetchingMood(false);
       } else if (data) {
         setCheckedInMood(data.checked_in_mood);
         if (data.destination_mood) {
           setSelectedDestinationMood(data.destination_mood);
         }
+        setFetchingMood(false);
       }
-      setFetchingMood(false);
     };
+
     fetchCheckedInMood();
   }, [entryId]);
-
-  if (!entryId || !checkedInMood) {
-    // Show message or redirect
-    return (
-      <div>
-        <p>We could not find your check-in.</p>
-        <Button onClick={() => router.push("/check-in")}>Start Over</Button>
-      </div>
-    );
-  }
-
-  const availableDestinationMoods = getDestinationEmotionsFrom(checkedInMood);
 
   const handleSubmit = async () => {
     if (!selectedDestinationMood || !entryId) return;
@@ -78,21 +68,43 @@ export default function MeditationDirectionPage() {
     if (error) {
       console.error("Error updating destination mood:", error);
       setFeedback("Something went wrong. Please try again.");
-      setLoading(false); // ✅ Only stop on error
+      setLoading(false);
     } else {
-      // ✅ Navigate immediately - keep loading true
+      console.log("💫 Your meditation is being prepared!");
+      // ✅ Keep loading true during navigation
       router.push(`/meditation/ready?entry_id=${entryId}`);
     }
   };
 
-  if (!entryId || !checkedInMood) {
+  // ✅ Show loading overlay while fetching - prevents white flash
+  if (fetchingMood) {
     return (
-      <div className="min-h-screen bg-purple-950 text-white flex flex-col items-center justify-center gap-4">
-        <p>We could not find your check-in.</p>
-        <Button onClick={() => router.push("/check-in")}>Start Over</Button>
+      <div className="min-h-screen bg-brand text-white relative overflow-hidden">
+        <PlanetBackground />
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-lg">Preparing next step...</p>
+          </div>
+        </div>
       </div>
     );
   }
+
+  // ✅ Error state with same background
+  if (!entryId || !checkedInMood) {
+    return (
+      <div className="min-h-screen bg-brand text-white relative overflow-hidden">
+        <PlanetBackground />
+        <div className="relative z-10 min-h-screen flex flex-col items-center justify-center gap-4">
+          <p>We could not find your check-in.</p>
+          <Button onClick={() => router.push("/check-in")}>Start Over</Button>
+        </div>
+      </div>
+    );
+  }
+
+  const availableDestinationMoods = getDestinationEmotionsFrom(checkedInMood);
 
   return (
     <div className="min-h-screen bg-brand text-white relative overflow-hidden">
@@ -102,15 +114,17 @@ export default function MeditationDirectionPage() {
           Choose Your Destination
         </h2>
         <p className="text-gray-400 text-sm mb-4 text-center max-w-md">
-          We’ll guide you gently, helping you shift from your current mood
+          We'll guide you gently, helping you shift from your current mood
           toward a calmer, lighter state.
         </p>
         <p className="text-gray-400 text-sm mb-6 text-center max-w-md">
           You are feeling{" "}
           <span className="text-white font-medium">{checkedInMood}</span> right
-          now. Choose the feeling you’d like this meditation to guide you
+          now. Choose the feeling you'd like this meditation to guide you
           toward.
         </p>
+
+        {/* Emoji Preview */}
         <div className="flex items-center gap-2 mb-8 text-lg">
           <span>{getEmotionMetadata(checkedInMood)?.emoji}</span>
           <span className="text-gray-400">→</span>
@@ -120,6 +134,8 @@ export default function MeditationDirectionPage() {
             <span className="text-gray-600">?</span>
           )}
         </div>
+
+        {/* Destination Mood Options */}
         <div className="flex gap-4 mb-8 flex-wrap justify-center max-w-2xl">
           {availableDestinationMoods.map((destinationOption) => {
             const display = getEmotionMetadata(destinationOption);
@@ -147,20 +163,32 @@ export default function MeditationDirectionPage() {
               </button>
             );
           })}
-          {feedback && (
-            <p className="text-sm text-purple-300 mb-4">{feedback}</p>
-          )}
-          <div className="min-w-[490px] mt-6">
-            <NavigationButtons
-              onBack={() => router.push(`/check-in?entry_id=${entryId}`)}
-              onNext={handleSubmit}
-              nextLabel="Guide Me"
-              backLabel="Back"
-              disabled={!selectedDestinationMood || loading}
-            />
-          </div>
+        </div>
+
+        {/* Feedback Message */}
+        {feedback && <p className="text-sm text-red-300 mb-4">{feedback}</p>}
+
+        {/* Navigation Buttons */}
+        <div className="min-w-[490px]">
+          <NavigationButtons
+            onBack={() => router.push(`/check-in?entry_id=${entryId}`)}
+            onNext={handleSubmit}
+            nextLabel="Guide Me"
+            backLabel="Back"
+            disabled={!selectedDestinationMood || loading}
+          />
         </div>
       </div>
+
+      {/* Loading Overlay - Shows during navigation to ready page */}
+      {loading && (
+        <div className="fixed inset-0 z-50 bg-brand/95 backdrop-blur-sm flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-lg">Preparing your meditation...</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
