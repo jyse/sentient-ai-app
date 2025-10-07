@@ -23,6 +23,7 @@ export default function MeditationDirectionPage() {
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState("");
   const [fetchingMood, setFetchingMood] = useState(true);
+  const [contentVisible, setContentVisible] = useState(false);
 
   useEffect(() => {
     const fetchCheckedInMood = async () => {
@@ -49,6 +50,11 @@ export default function MeditationDirectionPage() {
           setSelectedDestinationMood(data.destination_mood);
         }
         setFetchingMood(false);
+
+        // ✅ Trigger fade-in after short delay
+        setTimeout(() => {
+          setContentVisible(true);
+        }, 100);
       }
     };
 
@@ -109,7 +115,13 @@ export default function MeditationDirectionPage() {
   return (
     <div className="min-h-screen bg-brand text-white relative overflow-hidden">
       <PlanetBackground />
-      <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-8">
+
+      {/* ✅ Fade-in animation for all content */}
+      <div
+        className={`relative z-10 min-h-screen flex flex-col items-center justify-center p-8 transition-opacity duration-700 ${
+          contentVisible ? "opacity-100" : "opacity-0"
+        }`}
+      >
         <h2 className="text-2xl font-semibold mb-2 text-center">
           Choose Your Destination
         </h2>
@@ -189,6 +201,24 @@ export default function MeditationDirectionPage() {
           </div>
         </div>
       )}
+
+      {/* ✅ Add custom animation styles */}
+      <style jsx global>{`
+        @keyframes fade-in-up {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .animate-fade-in-up {
+          animation: fade-in-up 0.6s ease-out forwards;
+        }
+      `}</style>
     </div>
   );
 }
