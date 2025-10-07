@@ -24,78 +24,184 @@ export type MeditationPhase = {
   theme?: MeditationTheme;
 };
 
+const MUSIC_MAP: Record<string, string> = {
+  accepting: "accepting.mp3",
+  calm: "calm.mp3",
+  peaceful: "peaceful.mp3",
+  grateful: "grateful.mp3",
+  content: "content.mp3",
+  grounded: "grounded.mp3",
+  connected: "connected.mp3",
+  patient: "patient.mp3",
+  hopeful: "hopeful.mp3",
+  joyful: "joyful.mp3",
+  energized: "energized.mp3",
+  rested: "rested.mp3",
+  understanding: "understanding.mp3",
+  focused: "focused.mp3",
+  relaxed: "calm.mp3",
+  clear: "focused.mp3"
+};
+
 export default function MeditationReadyPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const entryId = searchParams.get("entry_id");
-  const [entry, setMoodEntry] = useState<MoodEntry | null>(null);
-  const [loadingStep, setLoadingStep] = useState(0);
-  const [countdown, setCountdown] = useState<number | null>(null);
+
+  const [entry, setEntry] = useState<MoodEntry | null>(null);
   const [meditation, setMeditation] = useState<MeditationPhase[] | null>(null);
 
+  // Progress tracking
+  const [progress, setProgress] = useState(0);
+  const [currentStep, setCurrentStep] = useState<string>("Initializing...");
+  const [preparing, setPreparing] = useState(true);
+  const [countdown, setCountdown] = useState<number | null>(null);
+
+  // Error handling
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
-    const fetchMoodEntry = async () => {
-      if (!entryId) return;
+    prepareEverything();
+  }, [entryId]);
+
+  const prepareEverything = async () => {
+    try {
+      // ✅ Step 1: Fetch entry data
+      setCurrentStep("Fetching your emotional state...");
+      setProgress(10);
+
+      if (!entryId) {
+        router.push("/check-in");
+        return;
+      }
 
       const {
         data: { user }
       } = await supabase.auth.getUser();
-      if (!user) return router.push("/login");
+      if (!user) {
+        router.push("/login");
+        return;
+      }
 
-      const { data, error } = await supabase
+      const { data: entryData, error: entryError } = await supabase
         .from("mood_entries")
         .select("id, checked_in_mood, destination_mood, note")
         .eq("id", entryId)
         .single();
 
-      if (error || !data) {
-        return router.push("/check-in");
+      if (entryError || !entryData) {
+        router.push("/check-in");
+        return;
       }
 
-      if (!data.destination_mood) {
-        return router.push(`/meditation/destination?entry_id=${entryId}`);
+      if (!entryData.destination_mood) {
+        router.push(`/meditation/destination?entry_id=${entryId}`);
+        return;
       }
 
-      setMoodEntry(data);
-      // AI generating meditations via RAG + system prompt
-      const response = await fetch("/api/generate", {
+      setEntry(entryData);
+      setProgress(20);
+
+      // ✅ Step 2: Generate meditation with AI
+      setCurrentStep("Generating your personalized meditation...");
+      setProgress(30);
+
+      const generateResponse = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          checked_in_mood: data.checked_in_mood,
-          destination_mood: data.destination_mood,
-          note: data.note
+          checked_in_mood: entryData.checked_in_mood,
+          destination_mood: entryData.destination_mood,
+          note: entryData.note
         })
       });
 
-      if (!response.ok) {
-        console.error("Generate API failed", await response.text());
-        return router.push(`/meditation/destination?entry_id=${entryId}`);
+      if (!generateResponse.ok) {
+        throw new Error("Failed to generate meditation");
       }
 
-      const meditationJson: MeditationPhase[] = await response.json();
+      const meditationJson: MeditationPhase[] = await generateResponse.json();
 
       if (!Array.isArray(meditationJson) || meditationJson.length !== 6) {
-        console.error("Generate API returned unexpected shape", meditationJson);
-        return router.push(`/meditation/destination?entry_id=${entryId}`);
+        throw new Error("Invalid meditation format");
       }
 
       setMeditation(meditationJson);
+      setProgress(50);
+
+      // ✅ Step 3: Preload ALL TTS audio files
+      setCurrentStep("Preparing voice narration...");
+
+      const ttsCache: Record<number, { url: string; duration: number }> = {};
+
+      for (let i = 0; i < meditationJson.length; i++) {
+        const phase = meditationJson[i];
+
+        try {
+          const ttsResponse = await fetch("/api/tts", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: phase.text })
+          });
+
+          if (!ttsResponse.ok) throw new Error(`TTS failed for phase ${i}`);
+
+          const blob = await ttsResponse.blob();
+          const url = URL.createObjectURL(blob);
+
+          // Measure audio duration
+          const audio = new Audio(url);
+          await new Promise<void>((resolve) => {
+            audio.onloadedmetadata = () => {
+              ttsCache[i] = { url, duration: audio.duration * 1000 };
+              resolve();
+            };
+          });
+
+          // Update progress incrementally (50% to 85%)
+          const progressIncrement = 35 / meditationJson.length;
+          setProgress(50 + (i + 1) * progressIncrement);
+        } catch (err) {
+          console.error(`Failed to preload TTS for phase ${i}`, err);
+          // Continue even if one phase fails
+        }
+      }
+
+      setProgress(85);
+
+      // ✅ Step 4: Preload background music
+      setCurrentStep("Loading ambient music...");
+
+      const musicFile = MUSIC_MAP[entryData.destination_mood];
+      if (musicFile) {
+        const musicAudio = new Audio(`/music/${musicFile}`);
+        await new Promise<void>((resolve) => {
+          musicAudio.oncanplaythrough = () => resolve();
+          musicAudio.onerror = () => resolve(); // Continue even if music fails
+        });
+      }
+
+      setProgress(100);
+      setCurrentStep("Ready!");
+
+      // ✅ Step 5: Save everything to localStorage
       localStorage.setItem("currentMeditation", JSON.stringify(meditationJson));
-      startPreparation();
-    };
+      localStorage.setItem("ttsCache", JSON.stringify(ttsCache));
 
-    fetchMoodEntry();
-  }, [entryId, router]);
-
-  const startPreparation = () => {
-    // Simulate AI generation with loading steps
-    // 🎯 TODO: Replace with actual AI calls
-
-    setTimeout(() => setLoadingStep(1), 2000); // Understanding...
-    setTimeout(() => setLoadingStep(2), 2500); // Selecting phases...
-    setTimeout(() => setLoadingStep(3), 5000); // Ready!
-    setTimeout(() => setCountdown(3), 5000); // Start countdown
+      // ✅ Step 6: Start countdown
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      setPreparing(false);
+      setCountdown(3);
+    } catch (err) {
+      console.error("Preparation error:", err);
+      setError(
+        "Something went wrong preparing your meditation. Please try again."
+      );
+      setTimeout(
+        () => router.push(`/meditation/destination?entry_id=${entryId}`),
+        2000
+      );
+    }
   };
 
   // Countdown timer
@@ -114,102 +220,78 @@ export default function MeditationReadyPage() {
     return () => clearTimeout(timer);
   }, [countdown, entryId, router]);
 
-  if (!entry) {
+  // Error state
+  if (error) {
     return (
-      <div className="min-h-screen bg-purple-950 text-white flex items-center justify-center">
-        <p>Loading...</p>
+      <div className="min-h-screen bg-brand text-white relative overflow-hidden flex items-center justify-center">
+        <PlanetBackground />
+        <div className="relative z-10 text-center max-w-md">
+          <p className="text-red-300 mb-4">{error}</p>
+          <p className="text-sm text-gray-400">Redirecting...</p>
+        </div>
       </div>
     );
   }
-
-  const loadingSteps = [
-    { label: "Understanding your emotional state", complete: loadingStep >= 1 },
-    { label: "Selecting guidance phases", complete: loadingStep >= 2 },
-    { label: "Preparing your session", complete: loadingStep >= 3 }
-  ];
 
   return (
     <div className="min-h-screen bg-brand text-white relative overflow-hidden flex flex-col items-center justify-center p-8">
       <PlanetBackground />
       <div className="relative z-10 text-center max-w-lg">
-        {/* // condition just entry there too? */}
         {countdown !== null ? (
+          // ✅ Countdown view (only shown when 100% ready)
           <div className="space-y-6">
             <h1 className="text-3xl font-bold">Your Journey Awaits</h1>
-            <p className="text-gray-300">
-              You are feeling{" "}
-              <span className="font-semibold text-purple-200">
-                {entry.checked_in_mood}
-              </span>
-              <br />
-              Let&apos;s guide you toward{" "}
-              <span className="font-semibold text-orange-200">
-                {entry.destination_mood}
-              </span>
-            </p>
-            {entry.note && (
+            {entry && (
+              <p className="text-gray-300">
+                You are feeling{" "}
+                <span className="font-semibold text-purple-200">
+                  {entry.checked_in_mood}
+                </span>
+                <br />
+                Let&apos;s guide you toward{" "}
+                <span className="font-semibold text-orange-200">
+                  {entry.destination_mood}
+                </span>
+              </p>
+            )}
+            {entry?.note && (
               <p className="text-sm text-purple-200 italic max-w-md mx-auto">
-                {entry.note}
+                &quot;{entry.note}&quot;
               </p>
             )}
             <div className="text-6xl font-bold mt-8">{countdown}</div>
             <p className="text-sm text-gray-400">Starting meditation...</p>
           </div>
         ) : (
-          // Loading state
+          // ✅ Loading view with REAL progress
           <div className="space-y-6">
             <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-6" />
-            <h2 className="text-2xl font-semibold">Crafting your meditation</h2>
-            <div className="space-y-3 text-left max-w-sm mx-auto">
-              {loadingSteps.map((step, index) => (
-                <div key={index} className="flex items-center gap-3">
-                  <div
-                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                      step.complete
-                        ? "bg-purple-500 border-purple-500"
-                        : "border-gray-600"
-                    }`}
-                  >
-                    {step.complete && (
-                      <svg
-                        className="w-3 h-3 text-white"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={3}
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                    )}
-                  </div>
-                  <p
-                    className={`text-sm transition-opacity ${
-                      step.complete ? "text-white" : "text-gray-500"
-                    }`}
-                  >
-                    {step.label}
-                  </p>
-                </div>
-              ))}
+            <h2 className="text-2xl font-semibold">
+              Preparing Your Experience
+            </h2>
+
+            {/* Real progress bar */}
+            <div className="w-full max-w-md mx-auto">
+              <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-purple-500 transition-all duration-500"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+              <p className="text-sm text-gray-400 mt-2">{currentStep}</p>
+              <p className="text-xs text-gray-500 mt-1">
+                {Math.round(progress)}%
+              </p>
             </div>
+
+            {/* Show phase count when meditation is generated */}
+            {meditation && (
+              <p className="text-sm text-purple-300 mt-4">
+                ✨ {meditation.length} phases crafted for your journey
+              </p>
+            )}
           </div>
         )}
-
-        {/* Optional: Skip button during countdown
-        {countdown !== null && (
-          <button
-            onClick={() =>
-              router.push(`/meditation/session?entry_id=${entryId}`)
-            }
-            className="mt-6 text-sm text-gray-400 hover:text-white transition-colors"
-          >
-            Start now
-          </button>
-        )} */}
       </div>
     </div>
   );
