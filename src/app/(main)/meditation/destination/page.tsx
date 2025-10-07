@@ -25,6 +25,7 @@ export default function MeditationDirectionPage() {
 
   useEffect(() => {
     const fetchCheckedInMood = async () => {
+      console.log("fetching Mood");
       if (!entryId) {
         console.log("👹 Missing entry information. Please start over");
         setFeedback("Missing entry information. Please start over.");
@@ -74,27 +75,15 @@ export default function MeditationDirectionPage() {
       .update({ destination_mood: selectedDestinationMood })
       .eq("id", entryId);
 
-    setLoading(false);
-
     if (error) {
-      console.log("👹Error updating destination mood:", error);
+      console.error("Error updating destination mood:", error);
       setFeedback("Something went wrong. Please try again.");
+      setLoading(false); // ✅ Only stop on error
     } else {
-      console.log("💫 Your meditation is being prepared!");
-      setFeedback("Got it. Preparing your meditation...");
-      setTimeout(() => {
-        router.push(`/meditation/ready?entry_id=${entryId}`);
-      }, 800);
+      // ✅ Navigate immediately - keep loading true
+      router.push(`/meditation/ready?entry_id=${entryId}`);
     }
   };
-
-  if (fetchingMood) {
-    return (
-      <div className="min-h-screen bg-purple-950 text-white flex items-center justify-center">
-        <p>Loading..Konnichiwa 🌸.</p>
-      </div>
-    );
-  }
 
   if (!entryId || !checkedInMood) {
     return (

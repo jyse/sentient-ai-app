@@ -46,35 +46,25 @@ export default function CheckInPage() {
         .select()
         .single();
     } else {
-      // Create new entry
       result = await supabase
         .from("mood_entries")
         .insert([{ ...moodData, user_id: user.id }])
         .select("*")
         .maybeSingle();
-
-      if (result.error) {
-        console.error("❌ Supabase insert error:", result.error);
-      } else {
-        console.log("✅ You created a mood entry:", result.data);
-      }
     }
 
     const { data, error } = result;
-    setLoading(false);
 
     if (error || !data) {
       console.error("Mood save error:", error);
       setFeedback("Something went wrong saving your mood. Please try again 💔");
+      setLoading(false); // ✅ Stop loading on error
       return;
     }
 
-    setFeedback("Mood saved! Redirecting...");
-    console.log("✅ Mood saved");
-
-    // setTimeout(() => {
+    // ✅ DON'T set loading to false - keep it true during navigation
+    console.log("🙏✨ Let direct you where you want to go");
     router.push(`/meditation/destination?entry_id=${data.id}`);
-    // }, 800);
   };
 
   return (
@@ -151,6 +141,15 @@ export default function CheckInPage() {
           />
         </div>
       </div>
+      {/* /* Loading Overlay - Prevents white flash during navigation */}
+      {loading && (
+        <div className="fixed inset-0 z-50 bg-brand/95 backdrop-blur-sm flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-lg">Preparing next step...</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
