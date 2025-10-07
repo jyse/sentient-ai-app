@@ -17,6 +17,7 @@ export default function CheckInPage() {
   const [feedback, setFeedback] = useState("");
 
   const handleSubmit = async () => {
+    console.log("🧘‍♀️✨ Beginning your journey");
     if (!selectedMood) return;
     setLoading(true);
 
@@ -71,9 +72,9 @@ export default function CheckInPage() {
     setFeedback("Mood saved! Redirecting...");
     console.log("✅ Mood saved");
 
-    setTimeout(() => {
-      router.push(`/meditation/destination?entry_id=${data.id}`);
-    }, 500);
+    // setTimeout(() => {
+    router.push(`/meditation/destination?entry_id=${data.id}`);
+    // }, 800);
   };
 
   return (
