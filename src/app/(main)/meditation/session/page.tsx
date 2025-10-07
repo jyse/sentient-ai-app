@@ -303,6 +303,9 @@ export default function MeditationSessionPage() {
   };
 
   // ✅ NO LOADING SCREEN - Everything is ready!
+  console.log("🌸ENTRY: ", entry);
+  console.log("🌸DESINATION_MOOD: ", entry?.destination_mood);
+  console.log("🌸MEDITATION LENGTH: ", meditation?.length);
   if (!entry || !entry.destination_mood || !meditation.length) {
     return (
       <div className="min-h-screen bg-brand flex flex-col items-center justify-center text-white gap-4">
