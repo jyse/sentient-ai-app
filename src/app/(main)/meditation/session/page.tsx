@@ -57,7 +57,6 @@ type MeditationPhase = {
   };
 };
 
-// Background gradient interpolation
 function interpolateColor(
   from: { hue: number; sat: number; light: number },
   to: { hue: number; sat: number; light: number },
@@ -103,63 +102,84 @@ export default function MeditationSessionPage() {
 
   const phase = meditation[currentPhase];
 
-  // Fade text on phase change
   useEffect(() => {
     setTextVisible(false);
     const t = setTimeout(() => setTextVisible(true), 200);
     return () => clearTimeout(t);
   }, [currentPhase]);
 
-  // ✅ SIMPLIFIED: Load everything from localStorage (prepared by ready page)
+  // ✅ Load everything from localStorage
   useEffect(() => {
     const initSession = async () => {
+      console.log("🎬 Starting session initialization...");
+
       if (!entryId) {
+        console.log("❌ No entry ID found");
         router.push("/check-in");
         return;
       }
 
-      // Load meditation from localStorage (prepared by ready page)
       const storedMeditation = localStorage.getItem("currentMeditation");
       const storedTTSCache = localStorage.getItem("ttsCache");
 
+      console.log("📦 Stored meditation:", storedMeditation?.substring(0, 100));
+      console.log("🎤 Stored TTS cache:", storedTTSCache?.substring(0, 100));
+
       if (!storedMeditation) {
-        // If data missing, go back to ready page
+        console.log("❌ No meditation found in localStorage");
         router.push(`/meditation/ready?entry_id=${entryId}`);
         return;
       }
 
       try {
-        // Parse meditation data
         const parsedMeditation: MeditationPhase[] =
           JSON.parse(storedMeditation);
+        console.log("✅ Parsed meditation:", parsedMeditation.length, "phases");
         setMeditation(parsedMeditation);
 
-        // Load TTS cache
         if (storedTTSCache) {
-          ttsCacheRef.current = JSON.parse(storedTTSCache);
+          const parsedCache = JSON.parse(storedTTSCache);
+          console.log(
+            "✅ Parsed TTS cache:",
+            Object.keys(parsedCache).length,
+            "entries"
+          );
+          console.log("🎤 TTS Cache details:", parsedCache);
+          ttsCacheRef.current = parsedCache;
+        } else {
+          console.warn("⚠️ No TTS cache found!");
         }
 
-        // Fetch entry just for display purposes (not critical path)
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from("mood_entries")
           .select("id, checked_in_mood, destination_mood, note")
           .eq("id", entryId)
           .single();
 
+        console.log("📊 Supabase response:", { data, error });
+
         if (data) {
+          console.log("✅ Entry loaded:", data);
           setEntry(data);
 
-          // Setup background music
           const file = MUSIC_MAP[data.destination_mood];
+          console.log("🎵 Music file for", data.destination_mood, ":", file);
+
           if (file) {
             const music = new Audio(`/music/${file}`);
             music.loop = true;
             music.volume = 0.2;
             bgAudioRef.current = music;
+            console.log("✅ Background music loaded");
           }
+        } else {
+          console.error("❌ No entry data returned");
         }
+
+        setInitializing(false);
+        console.log("✅ Session initialization complete!");
       } catch (err) {
-        console.error("Failed to load meditation", err);
+        console.error("❌ Failed to load meditation:", err);
         router.push(`/meditation/ready?entry_id=${entryId}`);
       }
     };
@@ -167,7 +187,6 @@ export default function MeditationSessionPage() {
     initSession();
   }, [entryId, router]);
 
-  // Cleanup
   useEffect(() => {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
@@ -184,7 +203,6 @@ export default function MeditationSessionPage() {
     };
   }, []);
 
-  // Play narration on phase change
   useEffect(() => {
     if (!isPlaying) return;
 
@@ -197,11 +215,15 @@ export default function MeditationSessionPage() {
     }
 
     const data = ttsCacheRef.current[currentPhase];
+    console.log("🎤 Playing phase", currentPhase, "- TTS data:", data);
+
     if (data) {
       const audio = new Audio(data.url);
       audio.volume = 0.9;
       voiceAudioRef.current = audio;
-      audio.play().catch((err) => console.warn("Audio play failed:", err));
+      audio.play().catch((err) => console.warn("❌ Audio play failed:", err));
+    } else {
+      console.warn("⚠️ No TTS data for phase", currentPhase);
     }
   }, [currentPhase, isPlaying]);
 
@@ -231,7 +253,6 @@ export default function MeditationSessionPage() {
     setTimeout(() => router.push("/profile"), 2500);
   }, [entryId, totalTimeElapsed, router]);
 
-  // Playback timer
   useEffect(() => {
     if (!isPlaying || meditation.length === 0) {
       if (intervalRef.current) clearInterval(intervalRef.current);
@@ -269,6 +290,7 @@ export default function MeditationSessionPage() {
   }, [isPlaying, meditation, completeMeditation]);
 
   const togglePlayPause = () => {
+    console.log("🎮 Toggle play/pause - current state:", isPlaying);
     setIsPlaying((p) => {
       const next = !p;
       if (next) {
@@ -303,7 +325,6 @@ export default function MeditationSessionPage() {
     }
   };
 
-  // ✅ Show loading while initializing
   if (initializing) {
     return (
       <div className="min-h-screen bg-brand flex items-center justify-center text-white">
@@ -316,7 +337,6 @@ export default function MeditationSessionPage() {
     );
   }
 
-  // ✅ Error state - only shown if data is truly missing after initialization
   if (!entry || !entry.destination_mood || !meditation.length) {
     console.error("❌ Missing data after initialization:", {
       hasEntry: !!entry,
