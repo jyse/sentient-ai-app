@@ -1,6 +1,7 @@
+// /app/(main)/meditation/ready/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import PlanetBackground from "@/components/visuals/PlanetBackground";
@@ -51,37 +52,32 @@ export default function MeditationReadyPage() {
   const [entry, setEntry] = useState<MoodEntry | null>(null);
   const [meditation, setMeditation] = useState<MeditationPhase[] | null>(null);
 
-  // Progress tracking
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState<string>("Initializing...");
-  const [preparing, setPreparing] = useState(true);
   const [countdown, setCountdown] = useState<number | null>(null);
-
-  // Error handling
   const [error, setError] = useState<string | null>(null);
 
+  // Strict Mode double-run guard
+  const hasRunRef = useRef(false);
+
   useEffect(() => {
-    prepareEverything();
+    if (hasRunRef.current) return;
+    hasRunRef.current = true;
+    void prepareEverything();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entryId]);
 
   const prepareEverything = async () => {
     try {
-      // ✅ Step 1: Fetch entry data
       setCurrentStep("Fetching your emotional state...");
       setProgress(10);
 
-      if (!entryId) {
-        router.push("/check-in");
-        return;
-      }
+      if (!entryId) return router.push("/check-in");
 
       const {
         data: { user }
       } = await supabase.auth.getUser();
-      if (!user) {
-        router.push("/login");
-        return;
-      }
+      if (!user) return router.push("/login");
 
       const { data: entryData, error: entryError } = await supabase
         .from("mood_entries")
@@ -89,24 +85,18 @@ export default function MeditationReadyPage() {
         .eq("id", entryId)
         .single();
 
-      if (entryError || !entryData) {
-        router.push("/check-in");
-        return;
-      }
-
-      if (!entryData.destination_mood) {
-        router.push(`/meditation/destination?entry_id=${entryId}`);
-        return;
-      }
+      if (entryError || !entryData) return router.push("/check-in");
+      if (!entryData.destination_mood)
+        return router.push(`/meditation/destination?entry_id=${entryId}`);
 
       setEntry(entryData);
       setProgress(20);
 
-      // ✅ Step 2: Generate meditation with AI
+      // 2) Generate phases
       setCurrentStep("Generating your personalized meditation...");
       setProgress(30);
 
-      const generateResponse = await fetch("/api/generate", {
+      const genRes = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -115,90 +105,52 @@ export default function MeditationReadyPage() {
           note: entryData.note
         })
       });
+      if (!genRes.ok) throw new Error("Failed to generate meditation");
+      const phases: MeditationPhase[] = await genRes.json();
+      if (!Array.isArray(phases) || phases.length !== 6)
+        throw new Error("Invalid meditation format (need 6 phases)");
 
-      if (!generateResponse.ok) {
-        throw new Error("Failed to generate meditation");
-      }
-
-      const meditationJson: MeditationPhase[] = await generateResponse.json();
-
-      if (!Array.isArray(meditationJson) || meditationJson.length !== 6) {
-        throw new Error("Invalid meditation format");
-      }
-
-      setMeditation(meditationJson);
+      setMeditation(phases);
       setProgress(50);
 
-      // ✅ Step 3: Preload ALL TTS audio files (MODIFIED - store as base64)
+      // 3) TTS batch upload → signed URLs
       setCurrentStep("Preparing voice narration...");
-
-      const ttsCache: Record<number, { base64: string; duration: number }> = {};
-
-      for (let i = 0; i < meditationJson.length; i++) {
-        const phase = meditationJson[i];
-
-        try {
-          const ttsResponse = await fetch("/api/tts", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text: phase.text })
-          });
-
-          if (!ttsResponse.ok) throw new Error(`TTS failed for phase ${i}`);
-
-          const blob = await ttsResponse.blob();
-
-          // ✅ CHANGED: Convert blob to base64 instead of creating blob URL
-          const arrayBuffer = await blob.arrayBuffer();
-          const base64 = btoa(
-            String.fromCharCode(...new Uint8Array(arrayBuffer))
-          );
-
-          // Measure audio duration
-          const tempUrl = URL.createObjectURL(blob);
-          const audio = new Audio(tempUrl);
-          await new Promise<void>((resolve) => {
-            audio.onloadedmetadata = () => {
-              // ✅ CHANGED: Store base64 instead of URL
-              ttsCache[i] = { base64: base64, duration: audio.duration * 1000 };
-              URL.revokeObjectURL(tempUrl); // Clean up temp URL
-              resolve();
-            };
-          });
-
-          // Update progress incrementally (50% to 85%)
-          const progressIncrement = 35 / meditationJson.length;
-          setProgress(50 + (i + 1) * progressIncrement);
-        } catch (err) {
-          console.error(`Failed to preload TTS for phase ${i}`, err);
-          // Continue even if one phase fails
-        }
-      }
+      const batch = await fetch("/api/tts-batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          entryId,
+          phases: phases.map((p) => ({ text: p.text }))
+        })
+      });
+      if (!batch.ok) throw new Error("Failed to synthesize narration");
+      const { urls }: { urls: string[] } = await batch.json();
+      if (!urls || urls.length !== phases.length)
+        throw new Error("Narration not fully prepared");
 
       setProgress(85);
 
-      // ✅ Step 4: Preload background music
+      // 4) Preload ambient music (best-effort)
       setCurrentStep("Loading ambient music...");
-
-      const musicFile = MUSIC_MAP[entryData.destination_mood];
+      const musicFile =
+        MUSIC_MAP[entryData.destination_mood] ?? MUSIC_MAP["calm"];
       if (musicFile) {
-        const musicAudio = new Audio(`/music/${musicFile}`);
         await new Promise<void>((resolve) => {
-          musicAudio.oncanplaythrough = () => resolve();
-          musicAudio.onerror = () => resolve(); // Continue even if music fails
+          const audio = new Audio(`/music/${musicFile}`);
+          audio.oncanplaythrough = () => resolve();
+          audio.onerror = () => resolve();
         });
       }
 
       setProgress(100);
       setCurrentStep("Ready!");
 
-      // ✅ Step 5: Save everything to localStorage
-      localStorage.setItem("currentMeditation", JSON.stringify(meditationJson));
-      localStorage.setItem("ttsCache", JSON.stringify(ttsCache));
+      // 5) Handoff with sessionStorage
+      sessionStorage.setItem("entryId", entryId);
+      sessionStorage.setItem("meditation", JSON.stringify(phases));
+      sessionStorage.setItem("ttsUrls", JSON.stringify(urls));
 
-      // ✅ Step 6: Start countdown
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      setPreparing(false);
+      await new Promise((r) => setTimeout(r, 400));
       setCountdown(3);
     } catch (err) {
       console.error("Preparation error:", err);
@@ -206,29 +158,23 @@ export default function MeditationReadyPage() {
         "Something went wrong preparing your meditation. Please try again."
       );
       setTimeout(
-        () => router.push(`/meditation/destination?entry_id=${entryId}`),
-        2000
+        () => router.push(`/meditation/destination?entry_id=${entryId ?? ""}`),
+        1600
       );
     }
   };
 
-  // Countdown timer
+  // Countdown → redirect
   useEffect(() => {
     if (countdown === null) return;
-
     if (countdown === 0) {
       router.push(`/meditation/session?entry_id=${entryId}`);
       return;
     }
-
-    const timer = setTimeout(() => {
-      setCountdown(countdown - 1);
-    }, 1000);
-
-    return () => clearTimeout(timer);
+    const t = setTimeout(() => setCountdown((c) => (c ?? 1) - 1), 1000);
+    return () => clearTimeout(t);
   }, [countdown, entryId, router]);
 
-  // Error state
   if (error) {
     return (
       <div className="min-h-screen bg-brand text-white relative overflow-hidden flex items-center justify-center">
@@ -246,7 +192,6 @@ export default function MeditationReadyPage() {
       <PlanetBackground />
       <div className="relative z-10 text-center max-w-lg">
         {countdown !== null ? (
-          // ✅ Countdown view (only shown when 100% ready)
           <div className="space-y-6">
             <h1 className="text-3xl font-bold">Your Journey Awaits</h1>
             {entry && (
@@ -271,14 +216,12 @@ export default function MeditationReadyPage() {
             <p className="text-sm text-gray-400">Starting meditation...</p>
           </div>
         ) : (
-          // ✅ Loading view with REAL progress
           <div className="space-y-6">
             <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-6" />
             <h2 className="text-2xl font-semibold">
               Preparing Your Experience
             </h2>
 
-            {/* Real progress bar */}
             <div className="w-full max-w-md mx-auto">
               <div className="h-2 bg-white/10 rounded-full overflow-hidden">
                 <div
@@ -292,7 +235,6 @@ export default function MeditationReadyPage() {
               </p>
             </div>
 
-            {/* Show phase count when meditation is generated */}
             {meditation && (
               <p className="text-sm text-purple-300 mt-4">
                 ✨ {meditation.length} phases crafted for your journey

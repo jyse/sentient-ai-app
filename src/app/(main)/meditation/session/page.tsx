@@ -7,10 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Pause, Play, SkipForward } from "lucide-react";
 import PlanetBackground from "@/components/visuals/PlanetBackground";
 
-const EMOTION_COLORS: Record<
-  string,
-  { hue: number; sat: number; light: number }
-> = {
+type HSLColor = { hue: number; sat: number; light: number };
+
+const EMOTION_COLORS: Record<string, HSLColor> = {
   sad: { hue: 210, sat: 60, light: 40 },
   anxious: { hue: 150, sat: 50, light: 45 },
   angry: { hue: 0, sat: 70, light: 50 },
@@ -52,16 +51,15 @@ type MoodEntry = {
 type MeditationPhase = {
   phase: string;
   text: string;
-  theme?: {
-    duration?: number;
-  };
+  theme?: { duration?: number };
 };
 
+// ✅ fully typed interpolateColor
 function interpolateColor(
-  from: { hue: number; sat: number; light: number },
-  to: { hue: number; sat: number; light: number },
+  from: HSLColor,
+  to: HSLColor,
   progress: number
-) {
+): HSLColor {
   return {
     hue: from.hue + (to.hue - from.hue) * progress,
     sat: from.sat + (to.sat - from.sat) * progress,
@@ -69,17 +67,18 @@ function interpolateColor(
   };
 }
 
-function toHSL(color: { hue: number; sat: number; light: number }) {
-  return `hsl(${color.hue}, ${color.sat}%, ${color.light}%)`;
-}
+const toHSL = (c: HSLColor) => `hsl(${c.hue}, ${c.sat}%, ${c.light}%)`;
 
 export default function MeditationSessionPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const entryId = searchParams.get("entry_id");
+  const entryId =
+    searchParams.get("entry_id") ?? sessionStorage.getItem("entryId") ?? "";
 
   const [entry, setEntry] = useState<MoodEntry | null>(null);
   const [meditation, setMeditation] = useState<MeditationPhase[]>([]);
+  const [ttsUrls, setTtsUrls] = useState<string[]>([]);
+
   const [currentPhase, setCurrentPhase] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [timeInPhase, setTimeInPhase] = useState(0);
@@ -90,18 +89,13 @@ export default function MeditationSessionPage() {
 
   const bgAudioRef = useRef<HTMLAudioElement | null>(null);
   const voiceAudioRef = useRef<HTMLAudioElement | null>(null);
-  const ttsCacheRef = useRef<
-    Record<number, { base64: string; duration: number }>
-  >({});
-  const blobUrlsRef = useRef<Record<number, string>>({});
   const currentPhaseRef = useRef(0);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // keep currentPhaseRef synced
   useEffect(() => {
     currentPhaseRef.current = currentPhase;
   }, [currentPhase]);
-
-  const phase = meditation[currentPhase];
 
   useEffect(() => {
     setTextVisible(false);
@@ -109,138 +103,102 @@ export default function MeditationSessionPage() {
     return () => clearTimeout(t);
   }, [currentPhase]);
 
-  // ✅ Load everything from localStorage
   useEffect(() => {
-    const initSession = async () => {
-      console.log("🎬 Starting session initialization...");
+    const init = async () => {
+      if (!entryId) return router.push("/check-in");
 
-      if (!entryId) {
-        console.log("❌ No entry ID found");
-        router.push("/check-in");
-        return;
-      }
+      // 🔹 read handoff from sessionStorage
+      const storedMeditation = sessionStorage.getItem("meditation");
+      const storedUrls = sessionStorage.getItem("ttsUrls");
 
-      const storedMeditation = localStorage.getItem("currentMeditation");
-      const storedTTSCache = localStorage.getItem("ttsCache");
-
-      console.log("📦 Stored meditation:", storedMeditation?.substring(0, 100));
-      console.log("🎤 Stored TTS cache:", storedTTSCache?.substring(0, 100));
-
-      if (!storedMeditation) {
-        console.log("❌ No meditation found in localStorage");
-        router.push(`/meditation/ready?entry_id=${entryId}`);
-        return;
-      }
-
-      try {
-        const parsedMeditation: MeditationPhase[] =
-          JSON.parse(storedMeditation);
-        console.log("✅ Parsed meditation:", parsedMeditation.length, "phases");
-        setMeditation(parsedMeditation);
-
-        if (storedTTSCache) {
-          const parsedCache = JSON.parse(storedTTSCache);
-          console.log(
-            "✅ Parsed TTS cache:",
-            Object.keys(parsedCache).length,
-            "entries"
-          );
-          ttsCacheRef.current = parsedCache;
-        } else {
-          console.warn("⚠️ No TTS cache found!");
+      if (storedMeditation) {
+        try {
+          setMeditation(JSON.parse(storedMeditation));
+        } catch {
+          console.warn("Invalid meditation data in sessionStorage");
         }
+      }
 
-        const { data, error } = await supabase
-          .from("mood_entries")
-          .select("id, checked_in_mood, destination_mood, note")
-          .eq("id", entryId)
-          .single();
+      if (storedUrls) {
+        try {
+          setTtsUrls(JSON.parse(storedUrls));
+        } catch {
+          console.warn("Invalid TTS URL data in sessionStorage");
+        }
+      }
 
-        console.log("📊 Supabase response:", { data, error });
+      // 🔹 load entry
+      const { data, error } = await supabase
+        .from("mood_entries")
+        .select("id, checked_in_mood, destination_mood, note")
+        .eq("id", entryId)
+        .single();
 
-        if (data) {
-          console.log("✅ Entry loaded:", data);
-          setEntry(data);
+      if (error || !data)
+        return router.push(`/meditation/ready?entry_id=${entryId}`);
+      setEntry(data);
 
-          const file = MUSIC_MAP[data.destination_mood];
-          console.log("🎵 Music file for", data.destination_mood, ":", file);
+      // 🔹 prepare background music
+      const file = MUSIC_MAP[data.destination_mood] ?? MUSIC_MAP["calm"];
+      const music = new Audio(`/music/${file}`);
+      music.loop = true;
+      music.volume = 0.2;
+      bgAudioRef.current = music;
 
-          if (file) {
-            const music = new Audio(`/music/${file}`);
-            music.loop = true;
-            music.volume = 0.2;
-            bgAudioRef.current = music;
-            console.log("✅ Background music loaded");
+      // 🔹 fallback: if no URLs, re-generate
+      if (
+        (!storedUrls || JSON.parse(storedUrls).length === 0) &&
+        storedMeditation
+      ) {
+        try {
+          const phases: MeditationPhase[] = JSON.parse(storedMeditation);
+          const resp = await fetch("/api/tts-batch", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              entryId,
+              phases: phases.map((p) => ({ text: p.text }))
+            })
+          });
+
+          if (resp.ok) {
+            const { urls }: { urls: string[] } = await resp.json();
+            setTtsUrls(urls);
+            sessionStorage.setItem("ttsUrls", JSON.stringify(urls));
           }
-        } else {
-          console.error("❌ No entry data returned");
+        } catch (err) {
+          console.error("Failed to re-generate signed URLs:", err);
         }
-
-        setInitializing(false);
-        console.log("✅ Session initialization complete!");
-      } catch (err) {
-        console.error("❌ Failed to load meditation:", err);
-        router.push(`/meditation/ready?entry_id=${entryId}`);
       }
+
+      setInitializing(false);
     };
 
-    initSession();
+    void init();
   }, [entryId, router]);
 
+  // cleanup
   useEffect(() => {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
       bgAudioRef.current?.pause();
-      if (voiceAudioRef.current) {
-        voiceAudioRef.current.pause();
-      }
-      // Clean up all blob URLs
-      Object.values(blobUrlsRef.current).forEach((url) => {
-        URL.revokeObjectURL(url);
-      });
+      voiceAudioRef.current?.pause();
     };
   }, []);
 
-  // ✅ MODIFIED: Play narration - recreate blob URL from base64
+  // ✅ play narration
   useEffect(() => {
     if (!isPlaying) return;
+    const url = ttsUrls[currentPhase];
+    if (!url) return;
 
-    if (voiceAudioRef.current) {
-      voiceAudioRef.current.pause();
-      voiceAudioRef.current = null;
-    }
+    voiceAudioRef.current?.pause();
 
-    const data = ttsCacheRef.current[currentPhase];
-    console.log("🎤 Playing phase", currentPhase, "- has data:", !!data);
-
-    if (data && data.base64) {
-      try {
-        // ✅ CHANGED: Recreate blob URL from base64
-        const binary = atob(data.base64);
-        const bytes = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) {
-          bytes[i] = binary.charCodeAt(i);
-        }
-        const blob = new Blob([bytes], { type: "audio/mpeg" });
-        const url = URL.createObjectURL(blob);
-
-        // Store for cleanup
-        blobUrlsRef.current[currentPhase] = url;
-
-        const audio = new Audio(url);
-        audio.volume = 0.9;
-        voiceAudioRef.current = audio;
-        audio
-          .play()
-          .then(() => console.log("✅ Audio playing for phase", currentPhase))
-          .catch((err) => console.warn("❌ Audio play failed:", err));
-      } catch (err) {
-        console.error("❌ Failed to recreate audio from base64:", err);
-      }
-    } else {
-      console.warn("⚠️ No TTS data for phase", currentPhase);
-    }
-  }, [currentPhase, isPlaying]);
+    const audio = new Audio(url);
+    audio.volume = 0.9;
+    voiceAudioRef.current = audio;
+    audio.play().catch((err) => console.warn("Voice playback failed:", err));
+  }, [currentPhase, isPlaying, ttsUrls]);
 
   const completeMeditation = useCallback(async () => {
     if (intervalRef.current) clearInterval(intervalRef.current);
@@ -250,14 +208,12 @@ export default function MeditationSessionPage() {
     bgAudioRef.current?.pause();
     voiceAudioRef.current?.pause();
 
-    const {
-      data: { user }
-    } = await supabase.auth.getUser();
+    const { data: authData, error } = await supabase.auth.getUser();
 
-    if (user && entryId) {
+    if (!error && authData?.user && entryId) {
       await supabase.from("meditation_sessions").insert([
         {
-          user_id: user.id,
+          user_id: authData.user.id,
           mood_entry_id: entryId,
           completed: true,
           duration_seconds: totalTimeElapsed
@@ -265,9 +221,10 @@ export default function MeditationSessionPage() {
       ]);
     }
 
-    setTimeout(() => router.push("/profile"), 2500);
+    setTimeout(() => router.push("/profile"), 2000);
   }, [entryId, totalTimeElapsed, router]);
 
+  // ✅ Timer + auto-advance
   useEffect(() => {
     if (!isPlaying || meditation.length === 0) {
       if (intervalRef.current) clearInterval(intervalRef.current);
@@ -276,7 +233,6 @@ export default function MeditationSessionPage() {
 
     intervalRef.current = setInterval(() => {
       setTotalTimeElapsed((prev) => prev + 1);
-
       setTimeInPhase((prev) => {
         const active = meditation[currentPhaseRef.current];
         const duration = active?.theme?.duration ?? 30;
@@ -291,7 +247,7 @@ export default function MeditationSessionPage() {
             });
             return 0;
           } else {
-            completeMeditation();
+            void completeMeditation();
             return prev;
           }
         }
@@ -305,12 +261,16 @@ export default function MeditationSessionPage() {
   }, [isPlaying, meditation, completeMeditation]);
 
   const togglePlayPause = () => {
-    console.log("🎮 Toggle play/pause - current state:", isPlaying);
     setIsPlaying((p) => {
       const next = !p;
       if (next) {
         bgAudioRef.current?.play().catch(() => {});
-        voiceAudioRef.current?.play().catch(() => {});
+        if (!voiceAudioRef.current && ttsUrls[currentPhase]) {
+          const a = new Audio(ttsUrls[currentPhase]);
+          a.volume = 0.9;
+          voiceAudioRef.current = a;
+          a.play().catch(() => {});
+        }
       } else {
         bgAudioRef.current?.pause();
         voiceAudioRef.current?.pause();
@@ -320,23 +280,20 @@ export default function MeditationSessionPage() {
   };
 
   const skipToNextPhase = () => {
-    if (voiceAudioRef.current) {
-      voiceAudioRef.current.pause();
-      voiceAudioRef.current = null;
-    }
-
+    voiceAudioRef.current?.pause();
     if (currentPhase < meditation.length - 1) {
       setCurrentPhase((p) => {
-        const next = p + 1;
-        currentPhaseRef.current = next;
-        return next;
+        const n = p + 1;
+        currentPhaseRef.current = n;
+        return n;
       });
       setTimeInPhase(0);
     } else {
-      completeMeditation();
+      void completeMeditation();
     }
   };
 
+  // ====== UI ======
   if (initializing) {
     return (
       <div className="min-h-screen bg-brand flex items-center justify-center text-white">
@@ -349,32 +306,21 @@ export default function MeditationSessionPage() {
     );
   }
 
-  if (!entry || !entry.destination_mood || !meditation.length) {
-    console.error("❌ Missing data after initialization:", {
-      hasEntry: !!entry,
-      hasDestination: !!entry?.destination_mood,
-      meditationLength: meditation.length
-    });
-
+  if (
+    !entry ||
+    !entry.destination_mood ||
+    !meditation.length ||
+    !ttsUrls.length
+  ) {
     return (
       <div className="min-h-screen bg-brand flex flex-col items-center justify-center text-white gap-4">
         <PlanetBackground />
         <p>Something went wrong loading your meditation.</p>
         <Button
-          onClick={() => router.push("/meditation/ready?entry_id=" + entryId)}
+          onClick={() => router.push(`/meditation/ready?entry_id=${entryId}`)}
         >
           Try Again
         </Button>
-      </div>
-    );
-  }
-
-  if (sessionComplete) {
-    return (
-      <div className="min-h-screen bg-brand flex flex-col items-center justify-center text-white">
-        <PlanetBackground />
-        <h2 className="text-4xl font-bold mb-4">Beautiful work</h2>
-        <p className="text-gray-300">You completed your meditation.</p>
       </div>
     );
   }
@@ -390,10 +336,21 @@ export default function MeditationSessionPage() {
     phaseProgress
   );
   const backgroundColor = toHSL(interpolated);
+  const phase = meditation[currentPhase];
   const phaseDuration = phase?.theme?.duration || 30;
   const phaseProgressPercent = (timeInPhase / phaseDuration) * 100;
   const totalProgress =
     ((currentPhase + timeInPhase / phaseDuration) / meditation.length) * 100;
+
+  if (sessionComplete) {
+    return (
+      <div className="min-h-screen bg-brand flex flex-col items-center justify-center text-white">
+        <PlanetBackground />
+        <h2 className="text-4xl font-bold mb-4">Beautiful work</h2>
+        <p className="text-gray-300">You completed your meditation.</p>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -462,9 +419,9 @@ export default function MeditationSessionPage() {
             className="w-16 h-16 flex items-center justify-center bg-white/90 text-black rounded-full shadow-lg hover:scale-105 transition-all"
           >
             {isPlaying ? (
-              <Pause size={28} fill="currentColor" />
+              <Pause size={28} />
             ) : (
-              <Play size={28} fill="currentColor" className="ml-1" />
+              <Play size={28} className="ml-1" />
             )}
           </button>
           <button
