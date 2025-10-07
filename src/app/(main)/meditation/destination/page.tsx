@@ -126,13 +126,13 @@ export default function MeditationDirectionPage() {
           Choose Your Destination
         </h2>
         <p className="text-gray-400 text-sm mb-4 text-center max-w-md">
-          We'll guide you gently, helping you shift from your current mood
+          We&apos;ll guide you gently, helping you shift from your current mood
           toward a calmer, lighter state.
         </p>
         <p className="text-gray-400 text-sm mb-6 text-center max-w-md">
           You are feeling{" "}
           <span className="text-white font-medium">{checkedInMood}</span> right
-          now. Choose the feeling you'd like this meditation to guide you
+          now. Choose the feeling you&apos;d like this meditation to guide you
           toward.
         </p>
 
@@ -191,16 +191,6 @@ export default function MeditationDirectionPage() {
           />
         </div>
       </div>
-
-      {/* Loading Overlay - Shows during navigation to ready page */}
-      {loading && (
-        <div className="fixed inset-0 z-50 bg-brand/95 backdrop-blur-sm flex items-center justify-center">
-          <div className="text-center">
-            <div className="w-16 h-16 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-lg">Preparing your meditation...</p>
-          </div>
-        </div>
-      )}
 
       {/* ✅ Add custom animation styles */}
       <style jsx global>{`
