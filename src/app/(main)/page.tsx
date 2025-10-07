@@ -57,7 +57,8 @@ export default function MainPage() {
   if (loading) {
     console.log("🌀Loading...");
     return (
-      <div className="min-h-screen bg-purple-950 flex items-center justify-center">
+      <div className="min-h-screen bg-brand flex items-center justify-center">
+        <PlanetBackground />
         <p className="text-white">Loading...</p>
       </div>
     );
