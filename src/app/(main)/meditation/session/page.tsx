@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Pause, Play, SkipForward } from "lucide-react";
 import PlanetBackground from "@/components/visuals/PlanetBackground";
 
-// 🎨 Emotion → background color
 const EMOTION_COLORS: Record<
   string,
   { hue: number; sat: number; light: number }
@@ -47,8 +46,8 @@ const MUSIC_MAP: Record<string, string> = {
 
 type MoodEntry = {
   id: string;
-  current_emotion: string;
-  target_emotion: string;
+  checked_in_mood: string;
+  destination_mood: string;
   note: string | null;
 };
 
@@ -122,7 +121,7 @@ export default function MeditationSessionPage() {
 
       const { data } = await supabase
         .from("mood_entries")
-        .select("id, current_emotion, target_emotion, note")
+        .select("id, checked_in_mood, destination_mood, note")
         .eq("id", entryId)
         .single();
 
@@ -169,7 +168,7 @@ export default function MeditationSessionPage() {
         }
 
         // Background music
-        const file = MUSIC_MAP[data.target_emotion];
+        const file = MUSIC_MAP[data.destination_mood];
         if (file) {
           const music = new Audio(`/music/${file}`);
           music.loop = true;
@@ -329,7 +328,7 @@ export default function MeditationSessionPage() {
     );
   }
 
-  if (!entry || !entry.target_emotion || !meditation.length) {
+  if (!entry || !entry.destination_mood || !meditation.length) {
     return (
       <div className="min-h-screen bg-brand flex flex-col items-center justify-center text-white gap-4">
         <PlanetBackground />
@@ -350,9 +349,9 @@ export default function MeditationSessionPage() {
   }
 
   const currentColor =
-    EMOTION_COLORS[entry.current_emotion] || EMOTION_COLORS.calm;
+    EMOTION_COLORS[entry.checked_in_mood] || EMOTION_COLORS.calm;
   const targetColor =
-    EMOTION_COLORS[entry.target_emotion] || EMOTION_COLORS.peaceful;
+    EMOTION_COLORS[entry.destination_mood] || EMOTION_COLORS.peaceful;
   const phaseProgress = currentPhase / Math.max(1, meditation.length - 1);
   const interpolated = interpolateColor(
     currentColor,

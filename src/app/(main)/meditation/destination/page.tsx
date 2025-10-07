@@ -4,13 +4,16 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
-import { getTargetEmotions, getEmotionDisplay } from "@/lib/emotionMap";
+import {
+  getDestinationEmotionsFrom,
+  getEmotionMetadata
+} from "@/lib/emotionMap";
 import PlanetBackground from "@/components/visuals/PlanetBackground";
 import NavigationButtons from "@/components/ui/NavigationButtons";
 
 export default function MeditationDirectionPage() {
-  const [currentMood, setCurrentMood] = useState<string | null>(null);
-  const [selectedTargetEmotion, setSelectedTargetEmotion] = useState<
+  const [checkedInMood, setCheckedInMood] = useState<string | null>(null);
+  const [selectedDestinationMood, setSelectedDestinationMood] = useState<
     string | null
   >(null);
   const router = useRouter();
@@ -21,7 +24,7 @@ export default function MeditationDirectionPage() {
   const [fetchingMood, setFetchingMood] = useState(true);
 
   useEffect(() => {
-    const fetchCurrentMood = async () => {
+    const fetchCheckedInMood = async () => {
       if (!entryId) {
         console.log("👹 Missing entry information. Please start over");
         setFeedback("Missing entry information. Please start over.");
@@ -31,7 +34,7 @@ export default function MeditationDirectionPage() {
 
       const { data, error } = await supabase
         .from("mood_entries")
-        .select("current_emotion, target_emotion")
+        .select("checked_in_mood, destination_mood")
         .eq("id", entryId)
         .single();
 
@@ -39,32 +42,42 @@ export default function MeditationDirectionPage() {
         console.error("👹 Error fetching mood entry:", error);
         setFeedback("Couldn't load your check-in. Please try again.");
       } else if (data) {
-        setCurrentMood(data.current_emotion);
-        if (data.target_emotion) {
-          setSelectedTargetEmotion(data.target_emotion);
+        setCheckedInMood(data.checked_in_mood);
+        if (data.destination_mood) {
+          setSelectedDestinationMood(data.destination_mood);
         }
       }
       setFetchingMood(false);
     };
-    fetchCurrentMood();
+    fetchCheckedInMood();
   }, [entryId]);
 
-  const targetEmotionIds = getTargetEmotions(currentMood);
+  if (!entryId || !checkedInMood) {
+    // Show message or redirect
+    return (
+      <div>
+        <p>We could not find your check-in.</p>
+        <Button onClick={() => router.push("/check-in")}>Start Over</Button>
+      </div>
+    );
+  }
+
+  const availableDestinationMoods = getDestinationEmotionsFrom(checkedInMood);
 
   const handleSubmit = async () => {
-    if (!selectedTargetEmotion || !entryId) return;
+    if (!selectedDestinationMood || !entryId) return;
     if (loading) return;
     setLoading(true);
 
     const { error } = await supabase
       .from("mood_entries")
-      .update({ target_emotion: selectedTargetEmotion })
+      .update({ destination_mood: selectedDestinationMood })
       .eq("id", entryId);
 
     setLoading(false);
 
     if (error) {
-      console.log("👹Error updating target emotion:", error);
+      console.log("👹Error updating destination mood:", error);
       setFeedback("Something went wrong. Please try again.");
     } else {
       console.log("💫 Your meditation is being prepared!");
@@ -78,12 +91,12 @@ export default function MeditationDirectionPage() {
   if (fetchingMood) {
     return (
       <div className="min-h-screen bg-purple-950 text-white flex items-center justify-center">
-        <p>Loading...</p>
+        <p>Loading..Konnichiwa 🌸.</p>
       </div>
     );
   }
 
-  if (!entryId || !currentMood) {
+  if (!entryId || !checkedInMood) {
     return (
       <div className="min-h-screen bg-purple-950 text-white flex flex-col items-center justify-center gap-4">
         <p>We could not find your check-in.</p>
@@ -97,7 +110,7 @@ export default function MeditationDirectionPage() {
       <PlanetBackground />
       <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-8">
         <h2 className="text-2xl font-semibold mb-2 text-center">
-          Choose Your Direction
+          Choose Your Destination
         </h2>
         <p className="text-gray-400 text-sm mb-4 text-center max-w-md">
           We’ll guide you gently, helping you shift from your current mood
@@ -105,31 +118,31 @@ export default function MeditationDirectionPage() {
         </p>
         <p className="text-gray-400 text-sm mb-6 text-center max-w-md">
           You are feeling{" "}
-          <span className="text-white font-medium">{currentMood}</span> right
+          <span className="text-white font-medium">{checkedInMood}</span> right
           now. Choose the feeling you’d like this meditation to guide you
           toward.
         </p>
         <div className="flex items-center gap-2 mb-8 text-lg">
-          <span>{getEmotionDisplay(currentMood)?.emoji}</span>
+          <span>{getEmotionMetadata(checkedInMood)?.emoji}</span>
           <span className="text-gray-400">→</span>
-          {selectedTargetEmotion ? (
-            <span>{getEmotionDisplay(selectedTargetEmotion)?.emoji}</span>
+          {selectedDestinationMood ? (
+            <span>{getEmotionMetadata(selectedDestinationMood)?.emoji}</span>
           ) : (
             <span className="text-gray-600">?</span>
           )}
         </div>
         <div className="flex gap-4 mb-8 flex-wrap justify-center max-w-2xl">
-          {targetEmotionIds.map((targetEmotion) => {
-            const display = getEmotionDisplay(targetEmotion);
+          {availableDestinationMoods.map((destinationOption) => {
+            const display = getEmotionMetadata(destinationOption);
             return (
               <button
-                key={targetEmotion}
-                onClick={() => setSelectedTargetEmotion(targetEmotion)}
-                aria-pressed={selectedTargetEmotion === targetEmotion}
+                key={destinationOption}
+                onClick={() => setSelectedDestinationMood(destinationOption)}
+                aria-pressed={selectedDestinationMood === destinationOption}
                 className={`
                   relative p-6 rounded-2xl border-2 transition-all duration-300 min-w-[140px]
                   ${
-                    selectedTargetEmotion === targetEmotion
+                    selectedDestinationMood === destinationOption
                       ? "bg-gray-800 border-purple-500 scale-105"
                       : "bg-gray-900/50 border-gray-700 hover:bg-gray-800/70 hover:border-gray-600"
                   }
@@ -154,7 +167,7 @@ export default function MeditationDirectionPage() {
               onNext={handleSubmit}
               nextLabel="Guide Me"
               backLabel="Back"
-              disabled={!selectedTargetEmotion || loading}
+              disabled={!selectedDestinationMood || loading}
             />
           </div>
         </div>

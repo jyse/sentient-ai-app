@@ -1,4 +1,4 @@
-export const EMOTIONAL_JOURNEY_MAP: Record<string, string[]> = {
+export const EMOTION_PROGRESSIONS: Record<string, string[]> = {
   // High frequency, negative → reduce arousal to low arousal, positive
   anxious: ["calm", "grounded", "peaceful"],
   worried: ["calm", "accepting", "peaceful"],
@@ -25,12 +25,10 @@ export const EMOTIONAL_JOURNEY_MAP: Record<string, string[]> = {
   happy: ["joyful", "grateful", "energized"]
 };
 
-export function getDestinationEmotionsFrom(
-  startingEmotion: string | null
-): string[] {
-  if (!startingEmotion) return ["calm", "peaceful", "content"];
+export function getTargetEmotions(currentEmotion: string | null): string[] {
+  if (!currentEmotion) return ["calm", "peaceful", "content"];
   return (
-    EMOTIONAL_JOURNEY_MAP[startingEmotion.toLowerCase()] || [
+    EMOTION_PROGRESSIONS[currentEmotion.toLowerCase()] || [
       "calm",
       "peaceful",
       "content"
@@ -47,7 +45,6 @@ export const EMOTION_DISPLAY: Record<
     color: string;
   }
 > = {
-  // Calming & Grounding States
   calm: {
     label: "Calm",
     description: "Peace and serenity",
@@ -60,26 +57,12 @@ export const EMOTION_DISPLAY: Record<
     emoji: "☮️",
     color: "bg-blue-600"
   },
-  grounded: {
-    label: "Grounded",
-    description: "Centered and stable",
-    emoji: "🌱",
-    color: "bg-green-700"
+  content: {
+    label: "Content",
+    description: "Gentle satisfaction",
+    emoji: "😊",
+    color: "bg-orange-600"
   },
-  relaxed: {
-    label: "Relaxed",
-    description: "Ease and comfort",
-    emoji: "😌",
-    color: "bg-cyan-600"
-  },
-  rested: {
-    label: "Rested",
-    description: "Refreshed and renewed",
-    emoji: "🛏️",
-    color: "bg-indigo-600"
-  },
-
-  // Accepting & Patient States
   accepting: {
     label: "Accepting",
     description: "Allowing what is",
@@ -92,14 +75,12 @@ export const EMOTION_DISPLAY: Record<
     emoji: "🐢",
     color: "bg-yellow-600"
   },
-  content: {
-    label: "Content",
-    description: "Gentle satisfaction",
-    emoji: "😊",
-    color: "bg-orange-600"
+  grounded: {
+    label: "Grounded",
+    description: "Centered and stable",
+    emoji: "🌱",
+    color: "bg-green-700"
   },
-
-  // Hopeful & Connected States
   hopeful: {
     label: "Hopeful",
     description: "Looking forward",
@@ -112,48 +93,12 @@ export const EMOTION_DISPLAY: Record<
     emoji: "🤝",
     color: "bg-rose-500"
   },
-  grateful: {
-    label: "Grateful",
-    description: "Appreciating what is",
-    emoji: "🙏",
-    color: "bg-pink-600"
-  },
-
-  // Clear & Focused States
-  clear: {
-    label: "Clear",
-    description: "Mental clarity",
-    emoji: "💎",
-    color: "bg-blue-400"
-  },
-  focused: {
-    label: "Focused",
-    description: "Sharp and attentive",
-    emoji: "🎯",
-    color: "bg-violet-600"
-  },
-  understanding: {
-    label: "Understanding",
-    description: "Seeing with insight",
-    emoji: "💡",
-    color: "bg-amber-500"
-  },
-
-  // Curious & Engaged States
   curious: {
     label: "Curious",
     description: "Open to discovery",
     emoji: "🪶",
     color: "bg-indigo-500"
   },
-  interested: {
-    label: "Interested",
-    description: "Engaged and attentive",
-    emoji: "👀",
-    color: "bg-purple-500"
-  },
-
-  // Joyful & Energized States
   joyful: {
     label: "Joyful",
     description: "Light and radiant",
@@ -165,13 +110,19 @@ export const EMOTION_DISPLAY: Record<
     description: "Alive and vibrant",
     emoji: "⚡",
     color: "bg-lime-500"
+  },
+  relaxed: {
+    label: "Relaxed",
+    description: "Ease and comfort",
+    emoji: "😌",
+    color: "bg-cyan-600"
   }
 };
 
-export function getEmotionMetadata(emotionName: string) {
+export function getEmotionDisplay(destinationOption: string) {
   return (
-    EMOTION_DISPLAY[emotionName] || {
-      label: emotionName,
+    EMOTION_DISPLAY[destinationOption] || {
+      label: destinationOption,
       description: "Finding balance",
       emoji: "✨",
       color: "bg-purple-600"

@@ -7,8 +7,8 @@ import PlanetBackground from "@/components/visuals/PlanetBackground";
 
 type MoodEntry = {
   id: string;
-  current_emotion: string;
-  target_emotion: string | null;
+  checked_in_mood: string;
+  destination_mood: string | null;
   note: string | null;
 };
 
@@ -28,15 +28,13 @@ export default function MeditationReadyPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const entryId = searchParams.get("entry_id");
-
-  const [entry, setEntry] = useState<MoodEntry | null>(null);
+  const [entry, setMoodEntry] = useState<MoodEntry | null>(null);
   const [loadingStep, setLoadingStep] = useState(0);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [meditation, setMeditation] = useState<MeditationPhase[] | null>(null);
 
-  // Fetch entry
   useEffect(() => {
-    const fetchEntry = async () => {
+    const fetchMoodEntry = async () => {
       if (!entryId) return;
 
       const {
@@ -44,48 +42,59 @@ export default function MeditationReadyPage() {
       } = await supabase.auth.getUser();
       if (!user) return router.push("/login");
 
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("mood_entries")
-        .select("id, current_emotion, target_emotion, note")
+        .select("id, checked_in_mood, destination_mood, note")
         .eq("id", entryId)
         .single();
 
-      if (data) {
-        // Inside fetchEntry, after `if (data) { ... }`:
-        setEntry(data);
-        // 👇 New: call /api/generate with this entry
-        const response = await fetch("/api/generate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            currentEmotion: data.current_emotion,
-            targetEmotion: data.target_emotion,
-            note: data.note
-          })
-        });
-
-        const meditationJson: MeditationPhase[] = await response.json();
-        console.log(meditationJson, "API RESPONSE");
-        setMeditation(meditationJson);
-        localStorage.setItem(
-          "currentMeditation",
-          JSON.stringify(meditationJson)
-        );
-
-        startPreparation();
+      if (error || !data) {
+        return router.push("/check-in");
       }
+
+      if (!data.destination_mood) {
+        return router.push(`/meditation/destination?entry_id=${entryId}`);
+      }
+
+      setMoodEntry(data);
+      // AI generating meditations via RAG + system prompt
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          checked_in_mood: data.checked_in_mood,
+          destination_mood: data.destination_mood,
+          note: data.note
+        })
+      });
+
+      if (!response.ok) {
+        console.error("Generate API failed", await response.text());
+        return router.push(`/meditation/destination?entry_id=${entryId}`);
+      }
+
+      const meditationJson: MeditationPhase[] = await response.json();
+
+      if (!Array.isArray(meditationJson) || meditationJson.length !== 6) {
+        console.error("Generate API returned unexpected shape", meditationJson);
+        return router.push(`/meditation/destination?entry_id=${entryId}`);
+      }
+
+      setMeditation(meditationJson);
+      localStorage.setItem("currentMeditation", JSON.stringify(meditationJson));
+      startPreparation();
     };
 
-    fetchEntry();
+    fetchMoodEntry();
   }, [entryId, router]);
 
   const startPreparation = () => {
     // Simulate AI generation with loading steps
     // 🎯 TODO: Replace with actual AI calls
 
-    setTimeout(() => setLoadingStep(1), 1000); // Understanding...
+    setTimeout(() => setLoadingStep(1), 2000); // Understanding...
     setTimeout(() => setLoadingStep(2), 2500); // Selecting phases...
-    setTimeout(() => setLoadingStep(3), 4000); // Ready!
+    setTimeout(() => setLoadingStep(3), 5000); // Ready!
     setTimeout(() => setCountdown(3), 5000); // Start countdown
   };
 
@@ -122,21 +131,20 @@ export default function MeditationReadyPage() {
   return (
     <div className="min-h-screen bg-brand text-white relative overflow-hidden flex flex-col items-center justify-center p-8">
       <PlanetBackground />
-
       <div className="relative z-10 text-center max-w-lg">
+        {/* // condition just entry there too? */}
         {countdown !== null ? (
-          // Countdown state
           <div className="space-y-6">
             <h1 className="text-3xl font-bold">Your Journey Awaits</h1>
             <p className="text-gray-300">
               You are feeling{" "}
               <span className="font-semibold text-purple-200">
-                {entry.current_emotion}
+                {entry.checked_in_mood}
               </span>
               <br />
-              Let s guide you toward{" "}
+              Let&apos;s guide you toward{" "}
               <span className="font-semibold text-orange-200">
-                {entry.target_emotion}
+                {entry.destination_mood}
               </span>
             </p>
             {entry.note && (
@@ -191,7 +199,7 @@ export default function MeditationReadyPage() {
           </div>
         )}
 
-        {/* Optional: Skip button during countdown */}
+        {/* Optional: Skip button during countdown
         {countdown !== null && (
           <button
             onClick={() =>
@@ -201,7 +209,7 @@ export default function MeditationReadyPage() {
           >
             Start now
           </button>
-        )}
+        )} */}
       </div>
     </div>
   );

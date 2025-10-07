@@ -30,7 +30,7 @@ export default function CheckInPage() {
     }
 
     const moodData = {
-      current_emotion: selectedMood,
+      checked_in_mood: selectedMood,
       note: note || null
     };
 
@@ -72,8 +72,8 @@ export default function CheckInPage() {
     console.log("✅ Mood saved");
 
     setTimeout(() => {
-      router.push(`/meditation/direction?entry_id=${data.id}`);
-    }, 800);
+      router.push(`/meditation/destination?entry_id=${data.id}`);
+    }, 500);
   };
 
   return (

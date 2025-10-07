@@ -19,7 +19,7 @@ type MeditationStats = {
 type RecentCheckIn = {
   date: string;
   emotion: string;
-  target_emotion: string | null;
+  destination_mood: string | null;
 };
 
 export default function ProfilePage() {
@@ -67,7 +67,7 @@ export default function ProfilePage() {
 
       const { data: checkIns } = await supabase
         .from("mood_entries")
-        .select("created_at, current_emotion, target_emotion")
+        .select("created_at, checked_in_mood, destination_mood")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(5);
@@ -79,8 +79,8 @@ export default function ProfilePage() {
               month: "short",
               day: "numeric"
             }),
-            emotion: entry.current_emotion,
-            target_emotion: entry.target_emotion
+            emotion: entry.checked_in_mood,
+            destination_mood: entry.destination_mood
           }))
         );
       }
@@ -210,9 +210,9 @@ export default function ProfilePage() {
                     <p className="font-semibold text-white capitalize">
                       {checkIn.emotion}
                     </p>
-                    {checkIn.target_emotion && (
+                    {checkIn.destination_mood && (
                       <p className="text-xs text-gray-500 mt-1">
-                        → {checkIn.target_emotion}
+                        → {checkIn.destination_mood}
                       </p>
                     )}
                   </div>

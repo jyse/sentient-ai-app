@@ -6,8 +6,8 @@ import OpenAI from "openai";
 type MatchChunkRow = {
   id: string;
   text: string;
-  current_emotion: string;
-  target_emotion: string;
+  checked_in_mood: string;
+  destination_mood: string;
   distance: number;
 };
 
@@ -24,8 +24,8 @@ export type MeditationPhase = {
 };
 
 type GenerateBody = {
-  currentEmotion: string;
-  targetEmotion: string | null;
+  checked_in_mood: string;
+  destination_mood: string | null;
   note?: string | null;
 };
 
@@ -35,55 +35,61 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY!
+});
 
 // ---- Route ----
 export async function POST(req: Request) {
   try {
-    const { currentEmotion, targetEmotion, note }: GenerateBody =
+    const { checked_in_mood, destination_mood, note }: GenerateBody =
       await req.json();
 
-    if (!currentEmotion || !targetEmotion) {
+    // 1️⃣ Validation
+    if (!checked_in_mood || !destination_mood) {
       return NextResponse.json(
-        { error: "currentEmotion and targetEmotion are required" },
+        { error: "checked_in_mood and destination_mood are required" },
         { status: 400 }
       );
     }
 
-    // 1) Embed the journey query
+    // 2️⃣ Embed the journey query
     const embedRes = await openai.embeddings.create({
       model: "text-embedding-3-small",
-      input: `${currentEmotion} ${targetEmotion}`
+      input: `${checked_in_mood} ${destination_mood}`
     });
     const queryEmbedding = embedRes.data[0].embedding;
 
-    // 2) Retrieve best-matching chunks via RPC
+    // 3️⃣ Retrieve best-matching chunks via RPC
     const { data: rpcData, error: rpcError } = await supabase.rpc(
       "match_chunks",
       {
         query_embedding: queryEmbedding,
-        in_current: currentEmotion,
-        in_target: targetEmotion,
+        checked_in_mood_param: checked_in_mood,
+        destination_mood_param: destination_mood,
         match_count: 10
       }
     );
+
     if (rpcError) {
-      console.error("Supabase RPC error:", rpcError);
+      console.error("❌ Supabase RPC error:", rpcError);
       return NextResponse.json({ error: rpcError.message }, { status: 500 });
     }
+
     const chunks: MatchChunkRow[] = (rpcData as MatchChunkRow[]) ?? [];
 
-    // 3) Build a strict system + user prompt
+    // 4️⃣ Build inspiration lines
     const inspirations =
       chunks.length > 0
         ? chunks
             .map(
-              (c) => `- (${c.current_emotion}→${c.target_emotion}) ${c.text}`
+              (c) => `- (${c.checked_in_mood}→${c.destination_mood}) ${c.text}`
             )
             .join("\n")
-        : "- (no inspiration found; write a gentle generic meditation)";
+        : "- (no inspiration found; write a gentle, generic meditation)";
 
-    const system = `
+    // 5️⃣ Create prompt
+    const systemPrompt = `
 You are a safe, supportive meditation guide.
 
 Write a guided meditation in exactly 6 phases:
@@ -95,66 +101,76 @@ Write a guided meditation in exactly 6 phases:
 6. Maintenance – suggest a simple way to carry it into daily life.
 
 Requirements:
-- Each phase should last 30 seconds when read aloud. 
+- Each phase should last ~30 seconds when read aloud. 
 - Tone: warm, compassionate, clear. No medical/therapeutic claims.
-- Use the "inspiration lines" as raw material; adapt rather than copy.
-- Personalize lightly using the user's note if present.
+- Use the "inspiration lines" as creative fuel; adapt rather than copy.
+- Lightly personalize using the user's note if present.
 - Return ONLY a JSON array of 6 items with keys "phase" and "text".
-- Output ONLY a valid JSON array. Do not include markdown, code fences, or explanations. 
+- Output ONLY a valid JSON array. Do NOT include markdown, code fences, or explanations.
 `;
 
-    const user = `
-Current emotion: ${currentEmotion}
-Target emotion: ${targetEmotion}
+    const userPrompt = `
+Checked-in emotion: ${checked_in_mood}
+Destination emotion: ${destination_mood}
 User note: ${note || "(none)"}
 
 Inspiration lines:
 ${inspirations}
 `;
 
-    // 4) Generate JSON phases
+    // 6️⃣ Generate meditation phases
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
-        { role: "system", content: system },
-        { role: "user", content: user }
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
       ]
     });
 
-    let raw = completion.choices[0].message?.content || "[]";
+    let raw = completion.choices[0].message?.content?.trim() || "[]";
 
-    // Strip Markdown code fences if present
-    raw = raw.trim();
+    // 7️⃣ Clean raw output (in case it contains code fences)
     if (raw.startsWith("```")) {
-      raw = raw.replace(/```json\n?/, "").replace(/```$/, "");
+      raw = raw
+        .replace(/^```json\n?/, "")
+        .replace(/^```/, "")
+        .replace(/```$/, "")
+        .trim();
     }
 
+    // 8️⃣ Parse safely
     let meditation: MeditationPhase[] = [];
     try {
       meditation = JSON.parse(raw);
     } catch (err) {
-      console.error("Failed to parse meditation JSON:", err, raw);
-    }
-
-    // 5) Validate shape: must be an array of 6 phases
-    if (!Array.isArray(meditation) || meditation.length !== 6) {
+      console.error("❌ Failed to parse meditation JSON:", err, raw);
       return NextResponse.json(
-        { error: "AI did not return 6 phases", raw },
+        { error: "Invalid JSON returned from AI", raw },
         { status: 502 }
       );
     }
 
-    // Optional runtime guard (light):
+    // 9️⃣ Validate shape: must be an array of 6 phases
+    if (!Array.isArray(meditation) || meditation.length !== 6) {
+      console.error("❌ AI did not return 6 phases:", meditation);
+      return NextResponse.json(
+        { error: "AI did not return 6 valid phases", raw },
+        { status: 502 }
+      );
+    }
+
+    // 10️⃣ Normalize output
     const phases = (meditation as MeditationPhase[]).map((p, i) => ({
       phase: typeof p.phase === "string" ? p.phase : `Phase ${i + 1}`,
       text: typeof p.text === "string" ? p.text : "",
       theme: { duration: 30 }
     }));
 
+    // ✅ Return the final phases
     return NextResponse.json(phases);
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Server error";
-    console.error("generate/POST error:", e);
+    console.error("❌ generate/POST error:", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
