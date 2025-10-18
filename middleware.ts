@@ -34,23 +34,41 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const {
-    data: { session }
-  } = await supabase.auth.getSession();
-
   const isAuthPage = request.nextUrl.pathname.startsWith("/login");
 
-  if (!session && !isAuthPage) {
-    return NextResponse.redirect(new URL("/login", request.url));
-  }
+  try {
+    const {
+      data: { session },
+      error
+    } = await supabase.auth.getSession();
 
-  if (session && isAuthPage) {
-    return NextResponse.redirect(new URL("/", request.url));
-  }
+    // If there's an auth error or no session, treat as logged out
+    if (error || !session) {
+      if (!isAuthPage) {
+        return NextResponse.redirect(new URL("/login", request.url));
+      }
+      return response;
+    }
 
-  return response;
+    // If logged in and trying to access login page, redirect to home
+    if (session && isAuthPage) {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+
+    return response;
+  } catch (error) {
+    // Handle any unexpected errors gracefully
+    console.error("Middleware auth error:", error);
+
+    // If error occurs and not on auth page, redirect to login
+    if (!isAuthPage) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+
+    return response;
+  }
 }
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"]
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)"]
 };

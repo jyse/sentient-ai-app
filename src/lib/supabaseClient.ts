@@ -5,8 +5,19 @@ export const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   {
     auth: {
-      persistSession: true, // ✅ keeps you logged in across reloads
-      autoRefreshToken: true
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      flowType: "pkce"
     }
   }
 );
+
+// Handle auth state changes
+if (typeof window !== "undefined") {
+  supabase.auth.onAuthStateChange((event) => {
+    if (event === "SIGNED_OUT") {
+      sessionStorage.clear();
+    }
+  });
+}

@@ -1,20 +1,29 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import PlanetBackground from "@/components/visuals/PlanetBackground";
 import NavigationButtons from "@/components/ui/NavigationButtons";
 import { CHECK_IN_MOODS } from "../../../lib/constants";
 
-export default function CheckInPage() {
+type PageProps = {
+  searchParams: Promise<{ entry_id?: string }>;
+};
+
+export default function CheckInPage({ searchParams }: PageProps) {
   const router = useRouter();
+  const [entryId, setEntryId] = useState<string | null>(null);
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
-  const searchParams = useSearchParams();
-  const entryId = searchParams.get("entry_id");
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
-  const [feedback, setFeedback] = useState("");
+
+  // Extract entryId from searchParams
+  useEffect(() => {
+    searchParams.then((params) => {
+      setEntryId(params.entry_id ?? null);
+    });
+  }, [searchParams]);
 
   const handleSubmit = async () => {
     console.log("🧘‍♀️✨ Beginning your journey");
@@ -57,7 +66,6 @@ export default function CheckInPage() {
 
     if (error || !data) {
       console.error("Mood save error:", error);
-      setFeedback("Something went wrong saving your mood. Please try again 💔");
       setLoading(false); // ✅ Stop loading on error
       return;
     }
@@ -115,7 +123,7 @@ export default function CheckInPage() {
           {/* Note Section */}
           <div className="space-y-3">
             <label className="text-sm text-gray-300 font-medium flex items-center gap-2">
-              (Optional) Share what’s on your heart 💭
+              (Optional) Share what&apos;s on your heart 💭
             </label>
             <textarea
               value={note}
@@ -126,7 +134,7 @@ export default function CheckInPage() {
               rows={3}
             />
             <p className="text-xs text-gray-500 text-center">
-              Only you can see this. It’s stored privately to guide your
+              Only you can see this. It&apos;s stored privately to guide your
               meditations.
             </p>
           </div>
@@ -141,7 +149,7 @@ export default function CheckInPage() {
           />
         </div>
       </div>
-      {/* /* Loading Overlay - Prevents white flash during navigation */}
+      {/* Loading Overlay - Prevents white flash during navigation */}
       {loading && (
         <div className="fixed inset-0 z-50 bg-brand/95 backdrop-blur-sm flex items-center justify-center">
           <div className="text-center">

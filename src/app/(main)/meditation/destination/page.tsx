@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import {
 import PlanetBackground from "@/components/visuals/PlanetBackground";
 import NavigationButtons from "@/components/ui/NavigationButtons";
 
-export default function MeditationDestinationPage() {
+function MeditationDestinationContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const entryId = searchParams.get("entry_id");
@@ -185,24 +185,6 @@ export default function MeditationDestinationPage() {
         </div>
       </div>
 
-      {/* ✅ Add custom animation styles */}
-      {/* <style jsx global>{`
-        @keyframes fade-in-up {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        .animate-fade-in-up {
-          animation: fade-in-up 0.6s ease-out forwards;
-        }
-      `}</style> */}
-
       {/* Loading Overlay - Shows during navigation to ready page */}
       {loading && (
         <div className="fixed inset-0 z-50 bg-brand/95 backdrop-blur-sm flex items-center justify-center">
@@ -213,5 +195,13 @@ export default function MeditationDestinationPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function MeditationDestinationPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-brand" />}>
+      <MeditationDestinationContent />
+    </Suspense>
   );
 }
