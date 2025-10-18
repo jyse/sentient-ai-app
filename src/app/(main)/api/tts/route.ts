@@ -2,28 +2,18 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import OpenAI from "openai";
 
-export const dynamic = "force-dynamic"; // ensure Node runtime
+export const dynamic = "force-dynamic";
 
-// ---- CONFIG ----
 const BUCKET = "sentient-audio";
-const SIGN_URL_SECONDS = 60 * 60; // 1 hour signed URLs
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!
-});
+const SIGN_URL_SECONDS = 60 * 60;
 
 type TtsBody = {
   text?: string;
   as?: "stream" | "upload";
-  entryId?: string; // required when as = "upload"
-  phaseIndex?: number; // 0-based; required when as = "upload"
-  voice?: string; // optional
-  model?: string; // optional
+  entryId?: string;
+  phaseIndex?: number;
+  voice?: string;
+  model?: string;
 };
 
 function badRequest(msg: string) {
@@ -32,6 +22,33 @@ function badRequest(msg: string) {
 
 export async function POST(req: Request) {
   try {
+    // ✅ Create clients inside the function
+    if (
+      !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      !process.env.SUPABASE_SERVICE_ROLE_KEY
+    ) {
+      return NextResponse.json(
+        { error: "Server storage not configured" },
+        { status: 500 }
+      );
+    }
+
+    if (!process.env.OPENAI_API_KEY) {
+      return NextResponse.json(
+        { error: "OPENAI_API_KEY missing" },
+        { status: 500 }
+      );
+    }
+
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY
+    });
+
     const body = (await req.json()) as TtsBody;
 
     const text = (body.text || "").trim();
@@ -42,14 +59,6 @@ export async function POST(req: Request) {
     if (!text) return badRequest("text is required");
     if (text.length > 2000) return badRequest("text too long (2000 chars max)");
 
-    if (!process.env.OPENAI_API_KEY) {
-      return NextResponse.json(
-        { error: "OPENAI_API_KEY missing" },
-        { status: 500 }
-      );
-    }
-
-    // ---- Generate the speech ----
     const speech = await openai.audio.speech.create({
       model,
       voice,
@@ -58,7 +67,6 @@ export async function POST(req: Request) {
 
     const arrayBuffer = await speech.arrayBuffer();
 
-    // ---- Stream directly back to the client ----
     if (as === "stream") {
       return new Response(arrayBuffer, {
         status: 200,
@@ -67,17 +75,6 @@ export async function POST(req: Request) {
           "Cache-Control": "no-store"
         }
       });
-    }
-
-    // ---- Upload mode ----
-    if (
-      !process.env.NEXT_PUBLIC_SUPABASE_URL ||
-      !process.env.SUPABASE_SERVICE_ROLE_KEY
-    ) {
-      return NextResponse.json(
-        { error: "Server storage not configured" },
-        { status: 500 }
-      );
     }
 
     const entryId = (body.entryId || "").trim();
@@ -90,7 +87,6 @@ export async function POST(req: Request) {
     const path = `tts/${entryId}/phase-${idx + 1}.mp3`;
     const blob = new Blob([arrayBuffer], { type: "audio/mpeg" });
 
-    // ---- Upload to Supabase ----
     const { error: uploadError } = await supabase.storage
       .from(BUCKET)
       .upload(path, blob, { contentType: "audio/mpeg", upsert: true });
@@ -102,7 +98,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // ---- Create signed URL ----
     const { data: signed, error: signError } = await supabase.storage
       .from(BUCKET)
       .createSignedUrl(path, SIGN_URL_SECONDS);
@@ -114,7 +109,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // ✅ Return signed URL and path
     return NextResponse.json(
       { signedUrl: signed.signedUrl, path },
       { status: 200 }
@@ -122,7 +116,6 @@ export async function POST(req: Request) {
   } catch (err) {
     console.error("tts route error:", err);
 
-    // ✅ TypeScript-safe error handling
     const message =
       err instanceof Error
         ? err.message
