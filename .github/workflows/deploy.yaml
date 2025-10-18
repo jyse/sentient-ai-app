@@ -1,4 +1,4 @@
-name: Build, Test, Tag, and Deploy
+name: CICD
 
 on:
   push:
@@ -7,6 +7,7 @@ on:
   pull_request:
     branches:
       - main
+
   workflow_dispatch:
   
 jobs:
