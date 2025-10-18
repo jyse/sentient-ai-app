@@ -92,7 +92,7 @@ export default function LoginPage() {
           </div>
           <Card className="border-white/10 bg-white/5 backdrop-blur-xl shadow-2xl">
             <CardHeader className="text-center pb-4">
-              <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-green-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-purple-500/50">
+              <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-purple-500/50">
                 <Heart className="w-8 h-8 text-white" />
               </div>
             </CardHeader>
