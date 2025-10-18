@@ -125,7 +125,7 @@ export default function CheckInPage({ searchParams }: PageProps) {
           {/* Note Section */}
           <div className="space-y-3">
             <label className="text-sm text-gray-300 font-medium flex items-center gap-2">
-              (Optional) Share what's on your heart 💭
+              (Optional) Share what&apos;s on your heart 💭
             </label>
             <textarea
               value={note}
@@ -136,7 +136,7 @@ export default function CheckInPage({ searchParams }: PageProps) {
               rows={3}
             />
             <p className="text-xs text-gray-500 text-center">
-              Only you can see this. It's stored privately to guide your
+              Only you can see this. It&apos;s stored privately to guide your
               meditations.
             </p>
           </div>
