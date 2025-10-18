@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import PlanetBackground from "@/components/visuals/PlanetBackground";
+import { Suspense } from "react";
 
 type MoodEntry = {
   id: string;
@@ -44,7 +45,7 @@ const MUSIC_MAP: Record<string, string> = {
   clear: "focused.mp3"
 };
 
-export default function MeditationReadyPage() {
+function MeditationReadyContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const entryId = searchParams.get("entry_id");
@@ -244,5 +245,13 @@ export default function MeditationReadyPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function MeditationReadyPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-brand" />}>
+      <MeditationReadyContent />
+    </Suspense>
   );
 }
