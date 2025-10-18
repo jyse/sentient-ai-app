@@ -22,6 +22,32 @@ jobs:
         with:
           node-version: '18'
 
+      - name: Debug NEXT_PUBLIC_SUPABASE_URL
+        run: |
+          echo "NEXT_PUBLIC_SUPABASE_URL length: ${{ env.NEXT_PUBLIC_SUPABASE_URL && env.NEXT_PUBLIC_SUPABASE_URL.length || 0 }}"
+
+      - name: Debug NEXT_PUBLIC_SUPABASE_ANON_KEY
+        run: |
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY length: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY && secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY.length || 0 }}"
+
+      - name: Check if NEXT_PUBLIC_SUPABASE_URL exist
+        run: |
+          if [ -z "${{ env.NEXT_PUBLIC_SUPABASE_URL }}" ]; then
+            echo "NEXT_PUBLIC_SUPABASE_URL is empty!"
+            exit 1
+          else
+            echo "NEXT_PUBLIC_SUPABASE_URL is set."
+          fi
+
+      - name: Check if NEXT_PUBLIC_SUPABASE_ANON_KEY exist
+        run: |
+          if [ -z "${{ env.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" ]; then
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY is empty!"
+            exit 1
+          else
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY is set."
+          fi
+
       - name: Check env vars
         run: |
           echo "NEXT_PUBLIC_SUPABASE_URL=${{ env.NEXT_PUBLIC_SUPABASE_URL }}"
