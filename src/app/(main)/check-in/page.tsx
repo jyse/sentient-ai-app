@@ -17,7 +17,6 @@ export default function CheckInPage({ searchParams }: PageProps) {
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
-  const [feedback, setFeedback] = useState("");
 
   // Extract entryId from searchParams
   useEffect(() => {
@@ -67,7 +66,6 @@ export default function CheckInPage({ searchParams }: PageProps) {
 
     if (error || !data) {
       console.error("Mood save error:", error);
-      setFeedback("Something went wrong saving your mood. Please try again 💔");
       setLoading(false); // ✅ Stop loading on error
       return;
     }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { Suspense, useEffect, useRef, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
@@ -54,7 +54,6 @@ type MeditationPhase = {
   theme?: { duration?: number };
 };
 
-// ✅ fully typed interpolateColor
 function interpolateColor(
   from: HSLColor,
   to: HSLColor,
@@ -69,7 +68,7 @@ function interpolateColor(
 
 const toHSL = (c: HSLColor) => `hsl(${c.hue}, ${c.sat}%, ${c.light}%)`;
 
-export default function MeditationSessionPage() {
+function MeditationSessionContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const entryId =
@@ -440,5 +439,13 @@ export default function MeditationSessionPage() {
         </div>
       </div>
     </>
+  );
+}
+
+export default function MeditationSessionPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-brand" />}>
+      <MeditationSessionContent />
+    </Suspense>
   );
 }
